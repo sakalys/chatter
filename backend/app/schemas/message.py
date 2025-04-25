@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class MessageBase(BaseModel):
@@ -22,5 +22,4 @@ class MessageResponse(MessageBase):
     id: UUID
     conversation_id: UUID
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

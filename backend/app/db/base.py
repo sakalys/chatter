@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from sqlalchemy.orm import as_declarative, declared_attr
 
 
 @as_declarative()

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 # Shared properties
@@ -27,8 +27,7 @@ class UserResponse(UserBase):
     id: UUID
     email: EmailStr
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Properties stored in DB
@@ -36,5 +35,4 @@ class UserInDB(UserBase):
     id: UUID
     hashed_password: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

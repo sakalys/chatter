@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.message import MessageResponse
 
@@ -25,13 +25,11 @@ class ConversationResponse(ConversationBase):
     id: UUID
     user_id: UUID
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConversationDetailResponse(ConversationResponse):
     """Detailed conversation response with messages."""
     messages: list[MessageResponse] = []
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
