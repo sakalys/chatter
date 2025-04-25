@@ -7,6 +7,16 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
+from app.db.base import Base
+
+# Import all models to ensure they are known to Alembic
+from app.models import api_key # noqa: F401
+from app.models import conversation # noqa: F401
+from app.models import mcp_config # noqa: F401
+from app.models import message # noqa: F401
+from app.models import user # noqa: F401
+
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -20,7 +30,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

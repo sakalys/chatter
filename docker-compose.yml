@@ -14,6 +14,7 @@ services:
       - VITE_API_URL=http://localhost:8000
     networks:
       - chat-network
+    user: "1000:1000"
 
   backend:
     build:
@@ -36,8 +37,10 @@ services:
       - AWS_REGION=us-east-1
       - ENV=development
       - SECRET_KEY=changethisinsecretkeytosomethingsecure
+      - UV_CACHE_DIR=/app/.uv_cache
     networks:
       - chat-network
+    user: "1000:1000"
 
   db:
     image: postgres:15
