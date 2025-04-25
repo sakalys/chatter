@@ -35,9 +35,9 @@ echo "Running linting with ruff..."
 # Apply Alembic migrations and run tests with pytest
 echo "Applying Alembic migrations and running tests..."
 docker compose run --rm \
-    -e POSTGRES_USER=${POSTGRES_USER} \
-    -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
-    -e POSTGRES_DB=${POSTGRES_DB} \
+    -e POSTGRES_USER=chatuser \
+    -e POSTGRES_PASSWORD=chatpassword \
+    -e POSTGRES_DB=chatdb \
     -e DB_HOST=${DB_HOST} \
     -e DB_PORT=${DB_PORT} \
     backend bash -c "uv run alembic upgrade head && uv run pytest -xvs tests"

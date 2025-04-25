@@ -3,8 +3,8 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from app.db.base import Base
 from app.models import ApiKey, Conversation, MCPConfig, Message, User
@@ -52,15 +52,15 @@ def run_migrations_offline() -> None:
         context.run_sync_ddl_as_migration()
 
 
-async def do_run_migrations(connection) -> None:
+def do_run_migrations(connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata
     )
 
     with context.begin_transaction():
-        # Run synchronous migration logic in a thread
-        await asyncio.to_thread(context.run_migrations)
+        # Run synchronous migration logic
+        context.run_migrations()
 
 
 async def run_migrations_online() -> None:
@@ -70,9 +70,8 @@ async def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    connectable = create_async_engine(
+        config.get_main_option("sqlalchemy.url"),
         poolclass=pool.NullPool,
         future=True,
     )
@@ -87,4 +86,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     # Run migrations online
-    run_migrations_online()
+    asyncio.run(run_migrations_online())
