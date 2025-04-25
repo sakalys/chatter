@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - chat-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+      - localstack
+    environment:
+      - DATABASE_URL=postgresql://chatuser:chatpassword@db:5432/chatdb
+      - REDIS_URL=redis://redis:6379/0
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - ENV=development
+      - SECRET_KEY=changethisinsecretkeytosomethingsecure
+    networks:
+      - chat-network
+
+  db:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=chatuser
+      - POSTGRES_PASSWORD=chatpassword
+      - POSTGRES_DB=chatdb
+    networks:
+      - chat-network
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - chat-network
+
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=kms
+      - DEBUG=1
+    volumes:
+      - ./localstack:/tmp/localstack
+    networks:
+      - chat-network
+
+networks:
+  chat-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

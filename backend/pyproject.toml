@@ -1,0 +1,19 @@
+[project]
+name = "chat-platform-backend"
+version = "0.1.0"
+description = "Backend for a model-agnostic chat platform"
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy",
+    "pydantic",
+    "asyncpg",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
