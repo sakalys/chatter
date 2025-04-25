@@ -100,8 +100,9 @@ async def google_login(
 
         return {"access_token": access_token, "token_type": "bearer"}
 
-    except ValueError:
+    except ValueError as e:
         # Invalid token
+        print(f"Google ID token verification failed: {e}") # Added detailed logging
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Google ID token",

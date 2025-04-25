@@ -12,9 +12,10 @@ class UserBase(BaseModel):
 
 
 # Properties to receive via API on creation
+# Properties to receive via API on creation
 class UserCreate(UserBase):
     email: EmailStr
-    password: str
+    password: str | None = None # Make password optional for OAuth users
 
 
 # Properties to receive via API on update

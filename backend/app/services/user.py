@@ -1,3 +1,4 @@
+import secrets # Import secrets module
 from uuid import UUID
 
 from sqlalchemy import select
@@ -48,9 +49,18 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     Returns:
         Created user object
     """
+    hashed_password = None
+    if user_in.password is not None:
+        hashed_password = get_password_hash(user_in.password)
+    else:
+        # Generate a random password for OAuth users
+        random_password = secrets.token_urlsafe(16) # Generate a random string
+        hashed_password = get_password_hash(random_password) # Hash the random string
+
+
     user = User(
         email=user_in.email,
-        hashed_password=get_password_hash(user_in.password),
+        hashed_password=hashed_password, # Use generated hashed password for OAuth users
         full_name=user_in.full_name,
         is_active=user_in.is_active,
         is_superuser=user_in.is_superuser,
