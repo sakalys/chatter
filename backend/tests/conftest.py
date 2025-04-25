@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator, Generator
 
 import pytest
 from fastapi import FastAPI
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -16,7 +16,7 @@ from app.db.session import get_db
 TEST_DATABASE_URL = "postgresql+asyncpg://test-user:test-password@db:5432/test-db"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 async def test_engine():
     """Create a test database engine and tables."""
     engine = create_async_engine(
