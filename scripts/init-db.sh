@@ -11,6 +11,6 @@ docker compose exec db sh -c 'until pg_isready; do sleep 1; done'
 
 # Run migrations
 echo "Running database migrations..."
-docker compose exec backend alembic upgrade head
+docker compose exec backend uv run alembic upgrade head
 
 echo "Database initialization complete!"

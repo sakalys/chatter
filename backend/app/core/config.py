@@ -29,7 +29,9 @@ class Settings(BaseModel):
     aws_endpoint_url: str | None = Field(default=None)  # For LocalStack
     
     # CORS
-    cors_origins: list[str] = Field(default=["http://localhost:3000"])
+    cors_origins: list[str] = Field(default=["http://localhost:3000", "http://localhost:5173"])
+
+    google_client_id: str = Field(default="181853076785-uf93784hrobvqqfrgftek08hd5n03m25.apps.googleusercontent.com")
 
 
 # Create settings instance

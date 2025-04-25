@@ -19,6 +19,8 @@ dependencies = [
     "python-multipart",
     "alembic",
     "bcrypt>=4.3.0",
+    "google-auth>=2.39.0",
+    "requests>=2.32.3",
 ]
 
 [project.optional-dependencies]

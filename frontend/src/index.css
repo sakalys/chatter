@@ -1,3 +1,4 @@
 @import "tailwindcss";
+@import 'react-toastify/dist/ReactToastify.css';
 
 /* Custom styles can be added below */

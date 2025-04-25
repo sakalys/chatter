@@ -10,6 +10,7 @@ A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. U
 - **API Key Management**: Securely store and manage your API keys
 - **Conversation Management**: Create, view, and manage chat conversations
 - **MCP Integration**: Connect to MCP servers for extended capabilities
+  Users can customize their accounts by configuring these client-server connections.
 - **User Authentication**: Secure user accounts and authentication
 
 ## Tech Stack
