@@ -25,4 +25,4 @@ RUN uv sync --extra dev --extra test
 COPY . .
 
 # Run the application
-CMD ["uv", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uv", "run", "fastapi", "dev", "app/main.py", "--host", "0.0.0.0", "--port", "8000", "--reload"]

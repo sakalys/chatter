@@ -59,7 +59,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd backend
-        uv sync -e ".[test,dev]"
+        uv sync --extra test --extra dev
     
     - name: Lint with ruff
       run: |
