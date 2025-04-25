@@ -11,7 +11,6 @@ dependencies = [
     "pydantic",
     "asyncpg",
     "python-jose[cryptography]",
-    "passlib[bcrypt]",
     "httpx",
     "boto3",
     "redis",
@@ -19,6 +18,7 @@ dependencies = [
     "email-validator",
     "python-multipart",
     "alembic",
+    "bcrypt>=4.3.0",
 ]
 
 [project.optional-dependencies]
