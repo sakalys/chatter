@@ -18,6 +18,7 @@ dependencies = [
     "sse-starlette",
     "email-validator",
     "python-multipart",
+    "alembic",
 ]
 
 [project.optional-dependencies]

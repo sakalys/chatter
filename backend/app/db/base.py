@@ -12,10 +12,9 @@ class Base:
     """Base class for all database models."""
 
     # Common columns for all models
-    id = Column(Integer, primary_key=True)
-    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
     # Generate __tablename__ automatically based on class name
     @declared_attr
     def __tablename__(self) -> str:
         return self.__name__.lower()
-    

@@ -52,14 +52,15 @@ def run_migrations_offline() -> None:
         context.run_sync_ddl_as_migration()
 
 
-def do_run_migrations(connection) -> None:
+async def do_run_migrations(connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata
     )
 
     with context.begin_transaction():
-        context.run_migrations()
+        # Run synchronous migration logic in a thread
+        await asyncio.to_thread(context.run_migrations)
 
 
 async def run_migrations_online() -> None:
@@ -85,4 +86,5 @@ async def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    asyncio.run(run_migrations_online())
+    # Run migrations online
+    run_migrations_online()

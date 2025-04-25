@@ -7,14 +7,13 @@ from app.db.base import Base
 
 class User(Base):
     """User model for authentication and user management."""
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=UUID) # Add UUID primary key
+
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     full_name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     is_superuser = Column(Boolean, default=False, nullable=False)
-    
+
     # Relationships
     api_keys = relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
