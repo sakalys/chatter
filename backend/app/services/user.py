@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -9,7 +8,7 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 
 
-async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
+async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     """
     Get a user by email.
     
@@ -24,7 +23,7 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     return result.scalars().first()
 
 
-async def get_user_by_id(db: AsyncSession, user_id: UUID) -> Optional[User]:
+async def get_user_by_id(db: AsyncSession, user_id: UUID) -> User | None:
     """
     Get a user by ID.
     
@@ -91,7 +90,7 @@ async def update_user(
 
 async def authenticate_user(
     db: AsyncSession, email: str, password: str
-) -> Optional[User]:
+) -> User | None:
     """
     Authenticate a user.
     

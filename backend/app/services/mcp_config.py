@@ -1,4 +1,3 @@
-from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -10,7 +9,7 @@ from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
 
 async def get_mcp_configs_by_user(
     db: AsyncSession, user_id: UUID
-) -> List[MCPConfig]:
+) -> list[MCPConfig]:
     """
     Get all MCP configurations for a user.
     
@@ -27,7 +26,7 @@ async def get_mcp_configs_by_user(
 
 async def get_mcp_config_by_id(
     db: AsyncSession, mcp_config_id: UUID, user_id: UUID
-) -> Optional[MCPConfig]:
+) -> MCPConfig | None:
     """
     Get an MCP configuration by ID for a specific user.
     

@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -16,11 +16,11 @@ from app.services.conversation import add_message_to_conversation
 
 async def generate_chat_response(
     conversation: Conversation,
-    messages: List[Message],
+    messages: list[Message],
     model: str,
     api_key: ApiKey,
     stream: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generate a chat response from an LLM provider.
     
@@ -51,23 +51,22 @@ async def generate_chat_response(
         return await _generate_openai_response(
             formatted_messages, model, decrypted_key, stream
         )
-    elif api_key.provider == "anthropic":
+    if api_key.provider == "anthropic":
         return await _generate_anthropic_response(
             formatted_messages, model, decrypted_key, stream
         )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported provider: {api_key.provider}"
-        )
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported provider: {api_key.provider}"
+    )
 
 
 async def _generate_openai_response(
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     model: str,
     api_key: str,
     stream: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generate a chat response from OpenAI.
     
@@ -107,16 +106,15 @@ async def _generate_openai_response(
         
         if stream:
             return response.iter_lines()
-        else:
-            return response.json()
+        return response.json()
 
 
 async def _generate_anthropic_response(
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     model: str,
     api_key: str,
     stream: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generate a chat response from Anthropic.
     
@@ -170,8 +168,7 @@ async def _generate_anthropic_response(
         
         if stream:
             return response.iter_lines()
-        else:
-            return response.json()
+        return response.json()
 
 
 async def process_chat_stream(
@@ -321,35 +318,34 @@ async def handle_chat_request(
                 api_key.provider
             )
         )
+    response = await generate_chat_response(
+        conversation, messages, model, api_key, stream=False
+    )
+
+    # Extract content from response based on provider
+    if api_key.provider == "openai":
+        content = response["choices"][0]["message"]["content"]
+    elif api_key.provider == "anthropic":
+        content = response["content"][0]["text"]
     else:
-        response = await generate_chat_response(
-            conversation, messages, model, api_key, stream=False
-        )
-        
-        # Extract content from response based on provider
-        if api_key.provider == "openai":
-            content = response["choices"][0]["message"]["content"]
-        elif api_key.provider == "anthropic":
-            content = response["content"][0]["text"]
-        else:
-            content = "Unsupported provider response"
-        
-        # Add assistant message to conversation
-        assistant_message = await add_message_to_conversation(
-            db,
-            MessageCreate(
-                role="assistant",
-                content=content,
-                model=model,
-                metadata={"response": response}
-            ),
-            conversation_id
-        )
-        
-        return {
-            "id": str(assistant_message.id),
-            "role": assistant_message.role,
-            "content": assistant_message.content,
-            "model": assistant_message.model,
-            "created_at": assistant_message.created_at.isoformat(),
-        }
+        content = "Unsupported provider response"
+
+    # Add assistant message to conversation
+    assistant_message = await add_message_to_conversation(
+        db,
+        MessageCreate(
+            role="assistant",
+            content=content,
+            model=model,
+            metadata={"response": response}
+        ),
+        conversation_id
+    )
+
+    return {
+        "id": str(assistant_message.id),
+        "role": assistant_message.role,
+        "content": assistant_message.content,
+        "model": assistant_message.model,
+        "created_at": assistant_message.created_at.isoformat(),
+    }

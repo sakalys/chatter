@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,13 +7,17 @@ from app.core.dependencies import DB, get_current_user
 from app.models.user import User
 from app.schemas.api_key import ApiKeyCreate, ApiKeyResponse, ApiKeyUpdate
 from app.services.api_key import (
-    create_api_key, delete_api_key, get_api_key_by_id, get_api_keys_by_user, update_api_key
+    create_api_key,
+    delete_api_key,
+    get_api_key_by_id,
+    get_api_keys_by_user,
+    update_api_key,
 )
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[ApiKeyResponse])
+@router.get("/", response_model=list[ApiKeyResponse])
 async def read_api_keys(
     current_user: Annotated[User, Depends(get_current_user)],
     db: DB,

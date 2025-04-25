@@ -1,4 +1,4 @@
-from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -26,10 +26,10 @@ class Settings(BaseModel):
     
     # AWS
     aws_region: str = Field(default="us-east-1")
-    aws_endpoint_url: Optional[str] = Field(default=None)  # For LocalStack
+    aws_endpoint_url: str | None = Field(default=None)  # For LocalStack
     
     # CORS
-    cors_origins: List[str] = Field(default=["http://localhost:3000"])
+    cors_origins: list[str] = Field(default=["http://localhost:3000"])
 
 
 # Create settings instance

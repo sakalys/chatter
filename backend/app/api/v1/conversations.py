@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,19 +6,27 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.dependencies import DB, get_current_user
 from app.models.user import User
 from app.schemas.conversation import (
-    ConversationCreate, ConversationDetailResponse, ConversationResponse, ConversationUpdate
+    ConversationCreate,
+    ConversationDetailResponse,
+    ConversationResponse,
+    ConversationUpdate,
 )
 from app.schemas.message import MessageCreate, MessageResponse
 from app.services.conversation import (
-    add_message_to_conversation, create_conversation, delete_conversation,
-    get_conversation_by_id, get_conversation_with_messages, get_conversations_by_user,
-    get_messages_by_conversation, update_conversation
+    add_message_to_conversation,
+    create_conversation,
+    delete_conversation,
+    get_conversation_by_id,
+    get_conversation_with_messages,
+    get_conversations_by_user,
+    get_messages_by_conversation,
+    update_conversation,
 )
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[ConversationResponse])
+@router.get("/", response_model=list[ConversationResponse])
 async def read_conversations(
     current_user: Annotated[User, Depends(get_current_user)],
     db: DB,
@@ -101,7 +109,7 @@ async def delete_user_conversation(
     await delete_conversation(db, conversation)
 
 
-@router.get("/{conversation_id}/messages", response_model=List[MessageResponse])
+@router.get("/{conversation_id}/messages", response_model=list[MessageResponse])
 async def read_conversation_messages(
     conversation_id: UUID,
     current_user: Annotated[User, Depends(get_current_user)],

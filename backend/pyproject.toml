@@ -5,15 +5,66 @@ description = "Backend for a model-agnostic chat platform"
 requires-python = ">=3.11"
 
 dependencies = [
-    "fastapi",
+    "fastapi[standard]",
     "uvicorn[standard]",
     "sqlalchemy",
     "pydantic",
     "asyncpg",
     "python-jose[cryptography]",
     "passlib[bcrypt]",
+    "httpx",
+    "boto3",
+    "redis",
+    "sse-starlette",
+    "email-validator",
+    "python-multipart",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+    "aiosqlite>=0.19.0",
+    "aiosqlite",  # For testing
+]
+
+dev = [
+    "ruff>=0.1.0",
+    "black>=23.9.1",
+    "isort>=5.12.0",
+    "mypy>=1.5.1",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "N", "UP", "ANN", "S", "A", "C4", "T20", "PT", "RET", "SIM"]
+ignore = ["ANN", "E501", "F401", "RET504", "S101", "B904", "F841"]
+
+[tool.ruff.lint.isort]
+known-third-party = ["fastapi", "pydantic", "sqlalchemy", "alembic", "jose", "passlib", "boto3", "httpx"]
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+asyncio_mode = "auto"

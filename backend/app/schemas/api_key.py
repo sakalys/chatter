@@ -1,13 +1,12 @@
-from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class ApiKeyBase(BaseModel):
     """Base API key schema."""
     provider: str
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class ApiKeyCreate(ApiKeyBase):
@@ -17,8 +16,8 @@ class ApiKeyCreate(ApiKeyBase):
 
 class ApiKeyUpdate(BaseModel):
     """API key update schema."""
-    name: Optional[str] = None
-    key: Optional[str] = None  # New API key to be encrypted
+    name: str | None = None
+    key: str | None = None  # New API key to be encrypted
 
 
 class ApiKeyResponse(ApiKeyBase):

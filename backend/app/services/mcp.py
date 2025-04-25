@@ -1,6 +1,4 @@
-import json
-from typing import Any, Dict, List, Optional
-from uuid import UUID
+from typing import Any
 
 import httpx
 from fastapi import HTTPException, status
@@ -11,8 +9,8 @@ from app.models.mcp_config import MCPConfig
 async def call_mcp_tool(
     mcp_config: MCPConfig,
     tool_name: str,
-    arguments: Dict[str, Any],
-) -> Dict[str, Any]:
+    arguments: dict[str, Any],
+) -> dict[str, Any]:
     """
     Call an MCP tool.
     
@@ -63,7 +61,7 @@ async def call_mcp_tool(
 async def access_mcp_resource(
     mcp_config: MCPConfig,
     resource_uri: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Access an MCP resource.
     
@@ -106,7 +104,7 @@ async def access_mcp_resource(
 
 async def get_mcp_server_info(
     mcp_config: MCPConfig,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get information about an MCP server.
     
@@ -148,7 +146,7 @@ async def get_mcp_server_info(
 
 async def list_mcp_tools(
     mcp_config: MCPConfig,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     List all tools available from an MCP server.
     
@@ -164,7 +162,7 @@ async def list_mcp_tools(
 
 async def list_mcp_resources(
     mcp_config: MCPConfig,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     List all resources available from an MCP server.
     

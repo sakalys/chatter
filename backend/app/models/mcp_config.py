@@ -1,5 +1,5 @@
-from sqlalchemy import Column, ForeignKey, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Column, ForeignKey, String, types
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -11,7 +11,7 @@ class MCPConfig(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)  # User-friendly name for the MCP configuration
     url = Column(String, nullable=False)  # MCP URL
-    configuration = Column(JSONB, nullable=True)  # Additional configuration for the MCP
+    configuration = Column(types.JSON, nullable=True)  # Additional configuration for the MCP
     
     # Relationships
     user = relationship("User", back_populates="mcp_configs")

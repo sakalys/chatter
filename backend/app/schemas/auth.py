@@ -1,4 +1,3 @@
-from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 
@@ -6,13 +5,13 @@ from pydantic import BaseModel, EmailStr
 class Token(BaseModel):
     """Token response schema."""
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "bearer"  # noqa: S105
 
 
 class TokenPayload(BaseModel):
     """Token payload schema."""
-    sub: Optional[str] = None
-    exp: Optional[int] = None
+    sub: str | None = None
+    exp: int | None = None
 
 
 class Login(BaseModel):

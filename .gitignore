@@ -102,3 +102,4 @@ yarn-error.log*
 
 # Local development
 .localstack/
+backend/.ruff_cache/

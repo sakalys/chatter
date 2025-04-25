@@ -1,12 +1,10 @@
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sse_starlette.sse import EventSourceResponse
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.dependencies import DB, get_current_user
 from app.models.user import User
-from app.schemas.message import MessageResponse
 from app.services.api_key import get_api_key_by_id
 from app.services.chat import handle_chat_request
 from app.services.conversation import get_conversation_by_id
@@ -14,7 +12,7 @@ from app.services.conversation import get_conversation_by_id
 router = APIRouter()
 
 
-@router.post("/{conversation_id}/generate", response_model=Dict[str, Any])
+@router.post("/{conversation_id}/generate", response_model=dict[str, Any])
 async def generate_chat_response(
     conversation_id: UUID,
     message: str,
@@ -66,7 +64,7 @@ async def generate_chat_response(
     return response
 
 
-@router.get("/models", response_model=Dict[str, List[Dict[str, str]]])
+@router.get("/models", response_model=dict[str, list[dict[str, str]]])
 async def list_available_models():
     """
     List available models for each provider.

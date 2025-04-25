@@ -1,4 +1,3 @@
-from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -13,7 +12,7 @@ from app.schemas.message import MessageCreate
 
 async def get_conversations_by_user(
     db: AsyncSession, user_id: UUID
-) -> List[Conversation]:
+) -> list[Conversation]:
     """
     Get all conversations for a user.
     
@@ -30,7 +29,7 @@ async def get_conversations_by_user(
 
 async def get_conversation_by_id(
     db: AsyncSession, conversation_id: UUID, user_id: UUID
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """
     Get a conversation by ID for a specific user.
     
@@ -54,7 +53,7 @@ async def get_conversation_by_id(
 
 async def get_conversation_with_messages(
     db: AsyncSession, conversation_id: UUID, user_id: UUID
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """
     Get a conversation with its messages by ID for a specific user.
     
@@ -168,7 +167,7 @@ async def add_message_to_conversation(
 
 async def get_messages_by_conversation(
     db: AsyncSession, conversation_id: UUID
-) -> List[Message]:
+) -> list[Message]:
     """
     Get all messages for a conversation.
     

@@ -1,5 +1,7 @@
 # Chat Platform
 
+[![CI](https://github.com/yourusername/chat-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/chat-platform/actions/workflows/ci.yml)
+
 A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. Users can select their preferred models and use their own API keys. The platform also supports MCP (Model Context Protocol) calls via user-specified URLs.
 
 ## Features
@@ -34,20 +36,94 @@ A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. U
    cd chat-platform
    ```
 
-2. Start the development environment:
+2. Start the development environment (this will start all services, initialize the database, and copy scripts):
    ```bash
-   docker-compose up -d
+   ./scripts/start-dev.sh
    ```
 
-3. Run database migrations:
+   Or you can do it step by step:
    ```bash
-   docker-compose exec backend alembic upgrade head
+   docker compose up -d
+   ./scripts/init-db.sh
+   ./scripts/copy-scripts.sh
+   ```
+
+3. Create a superuser (optional):
+   ```bash
+   docker compose exec backend python scripts/create-superuser.py
    ```
 
 4. Access the application:
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
+
+### Managing the Development Environment
+
+To stop the development environment:
+```bash
+./scripts/stop-dev.sh
+```
+
+To reset the development environment (this will remove all data and start fresh):
+```bash
+./scripts/reset-dev.sh
+```
+
+### Database Migrations
+
+To generate a new migration (when you've made changes to the database models):
+```bash
+./scripts/generate-migration.sh "description of the changes"
+```
+
+To apply migrations:
+```bash
+./scripts/init-db.sh
+```
+
+### Local Development
+
+You can also run the servers locally without Docker for development:
+
+#### Backend
+
+```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+cd backend
+uv sync -e ".[dev,test]"
+
+# Run the backend server
+../scripts/run-backend.sh
+```
+
+#### Frontend
+
+```bash
+# Install dependencies
+cd frontend
+npm install
+
+# Run the frontend server
+../scripts/run-frontend.sh
+```
+
+### Testing and Linting
+
+Run tests and linting inside Docker:
+```bash
+./scripts/docker-test.sh
+```
+
+Or run them locally (requires Python 3.11+):
+```bash
+./scripts/test.sh
+```
+
+The tests use an in-memory SQLite database for testing, so no additional setup is required.
 
 ## API Documentation
 

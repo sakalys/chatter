@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Union
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -14,7 +14,7 @@ ALGORITHM = "HS256"
 
 
 def create_access_token(
-    subject: Union[str, Any], expires_delta: Optional[timedelta] = None
+    subject: str | Any, expires_delta: timedelta | None = None
 ) -> str:
     """
     Create a JWT access token.
@@ -27,9 +27,9 @@ def create_access_token(
         JWT token as string
     """
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
+        expire = datetime.now(UTC) + timedelta(
             minutes=settings.access_token_expire_minutes
         )
     

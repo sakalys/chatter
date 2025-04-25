@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.dependencies import DB, get_current_user, get_current_active_superuser
+from app.core.dependencies import DB, get_current_active_superuser, get_current_user
 from app.models.user import User
 from app.schemas.user import UserResponse, UserUpdate
 from app.services.user import update_user

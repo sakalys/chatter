@@ -1,14 +1,13 @@
-from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.schemas.message import MessageResponse
 
 
 class ConversationBase(BaseModel):
     """Base conversation schema."""
-    title: Optional[str] = None
+    title: str | None = None
 
 
 class ConversationCreate(ConversationBase):
@@ -32,7 +31,7 @@ class ConversationResponse(ConversationBase):
 
 class ConversationDetailResponse(ConversationResponse):
     """Detailed conversation response with messages."""
-    messages: List[MessageResponse] = []
+    messages: list[MessageResponse] = []
     
     class Config:
         from_attributes = True

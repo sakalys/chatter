@@ -1,14 +1,14 @@
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel
 
 
 class MCPConfigBase(BaseModel):
     """Base MCP configuration schema."""
     name: str
     url: str
-    configuration: Optional[Dict[str, Any]] = None
+    configuration: dict[str, Any] | None = None
 
 
 class MCPConfigCreate(MCPConfigBase):
@@ -18,9 +18,9 @@ class MCPConfigCreate(MCPConfigBase):
 
 class MCPConfigUpdate(BaseModel):
     """MCP configuration update schema."""
-    name: Optional[str] = None
-    url: Optional[str] = None
-    configuration: Optional[Dict[str, Any]] = None
+    name: str | None = None
+    url: str | None = None
+    configuration: dict[str, Any] | None = None
 
 
 class MCPConfigResponse(MCPConfigBase):

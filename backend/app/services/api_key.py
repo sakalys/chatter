@@ -1,4 +1,3 @@
-from typing import List, Optional
 from uuid import UUID
 
 import boto3
@@ -7,13 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.api_key import ApiKey
-from app.models.user import User
 from app.schemas.api_key import ApiKeyCreate, ApiKeyUpdate
 
 
 async def get_api_keys_by_user(
     db: AsyncSession, user_id: UUID
-) -> List[ApiKey]:
+) -> list[ApiKey]:
     """
     Get all API keys for a user.
     
@@ -30,7 +28,7 @@ async def get_api_keys_by_user(
 
 async def get_api_key_by_id(
     db: AsyncSession, api_key_id: UUID, user_id: UUID
-) -> Optional[ApiKey]:
+) -> ApiKey | None:
     """
     Get an API key by ID for a specific user.
     
@@ -137,8 +135,8 @@ def encrypt_api_key(api_key: str) -> str:
         'kms',
         region_name=settings.aws_region,
         endpoint_url=settings.aws_endpoint_url,  # For LocalStack in development
-        aws_access_key_id='test',  # For LocalStack
-        aws_secret_access_key='test',  # For LocalStack
+        aws_access_key_id=settings.aws_access_key_id,  # For LocalStack
+        aws_secret_access_key=settings.aws_secret_access_key,  # For LocalStack
     )
     
     # In a real production environment, you would use a KMS key that you've created
@@ -148,7 +146,7 @@ def encrypt_api_key(api_key: str) -> str:
         try:
             response = kms_client.describe_key(KeyId='alias/chat-platform-key')
             key_id = response['KeyMetadata']['KeyId']
-        except:
+        except Exception:
             # Create a new key
             response = kms_client.create_key(
                 Description='Chat Platform API Key Encryption Key',
@@ -192,8 +190,8 @@ def decrypt_api_key(encrypted_key_reference: str) -> str:
         'kms',
         region_name=settings.aws_region,
         endpoint_url=settings.aws_endpoint_url,  # For LocalStack in development
-        aws_access_key_id='test',  # For LocalStack
-        aws_secret_access_key='test',  # For LocalStack
+        aws_access_key_id=settings.aws_access_key_id,  # For LocalStack
+        aws_secret_access_key=settings.aws_secret_access_key,  # For LocalStack
     )
     
     # Decode the base64-encoded encrypted key
