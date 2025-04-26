@@ -6,7 +6,7 @@ from app.core.config import settings
 # Create async engine
 engine = create_async_engine(
     settings.database_url.replace("postgresql://", "postgresql+asyncpg://"),
-    echo=settings.debug,
+    echo=False, # Disable SQLAlchemy echoing
     future=True,
 )
 

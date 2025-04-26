@@ -3,11 +3,15 @@ from uuid import UUID
 import boto3
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
+import base64
 
 from app.core.config import settings
 from app.models.api_key import ApiKey
 from app.schemas.api_key import ApiKeyCreate, ApiKeyUpdate
 
+# Configure logger
+logger = logging.getLogger(__name__)
 
 async def get_api_keys_by_user(
     db: AsyncSession, user_id: UUID
@@ -132,30 +136,33 @@ def encrypt_api_key(api_key: str) -> str:
     Returns:
         Encrypted API key reference
     """
-    # Create KMS client
-    kms_client = boto3.client(
-        'kms',
-        region_name=settings.aws_region,
-        endpoint_url=settings.aws_endpoint_url,  # For LocalStack in development
-        aws_access_key_id=settings.aws_access_key_id,  # For LocalStack
-        aws_secret_access_key=settings.aws_secret_access_key,  # For LocalStack
-    )
-    
-    # Use the alias we created for our key
-    key_id = 'alias/chat-platform-key'
-    
     try:
-        # Encrypt the API key
-        response = kms_client.encrypt(
-            KeyId=key_id,
-            Plaintext=api_key.encode('utf-8'),
+        logger.info(f"Attempting to encrypt API key using KMS key: {settings.aws_kms_key_id}")
+        # Create KMS client
+        kms = boto3.client(
+            'kms',
+            region_name=settings.aws_region,
+            endpoint_url=settings.aws_endpoint_url,
+            aws_access_key_id=settings.aws_access_key_id,
+            aws_secret_access_key=settings.aws_secret_access_key,
         )
         
-        # Return the encrypted key as a base64-encoded string
-        import base64
-        return base64.b64encode(response['CiphertextBlob']).decode('utf-8')
+        # Encrypt the API key
+        response = kms.encrypt(
+            KeyId=settings.aws_kms_key_id,
+            Plaintext=api_key.encode('utf-8')
+        )
+        
+        # Get the encrypted key reference and encode it as base64
+        encrypted_key = base64.b64encode(response['CiphertextBlob']).decode('utf-8')
+        
+        # Log the first few characters for debugging
+        logger.info(f"Successfully encrypted API key (first 5 chars): {encrypted_key[:5]}...")
+        
+        return encrypted_key
     except Exception as e:
-        print(f"Error encrypting API key: {str(e)}")
+        logger.error(f"Error encrypting API key with KMS: {e}")
+        logger.error(f"KMS configuration: region={settings.aws_region}, endpoint={settings.aws_endpoint_url}, key_id={settings.aws_kms_key_id}")
         raise
 
 
@@ -169,23 +176,38 @@ def decrypt_api_key(encrypted_key_reference: str) -> str:
     Returns:
         Decrypted API key
     """
-    # Create KMS client
-    kms_client = boto3.client(
-        'kms',
-        region_name=settings.aws_region,
-        endpoint_url=settings.aws_endpoint_url,  # For LocalStack in development
-        aws_access_key_id=settings.aws_access_key_id,  # For LocalStack
-        aws_secret_access_key=settings.aws_secret_access_key,  # For LocalStack
-    )
-    
-    # Decode the base64-encoded encrypted key
-    import base64
-    encrypted_key = base64.b64decode(encrypted_key_reference)
-    
-    # Decrypt the API key
-    response = kms_client.decrypt(
-        CiphertextBlob=encrypted_key,
-    )
-    
-    # Return the decrypted key as a string
-    return response['Plaintext'].decode('utf-8')
+    try:
+        logger.info(f"Attempting to decrypt API key using KMS key: {settings.aws_kms_key_id}")
+        # Create KMS client
+        kms = boto3.client(
+            'kms',
+            region_name=settings.aws_region,
+            endpoint_url=settings.aws_endpoint_url,
+            aws_access_key_id=settings.aws_access_key_id,
+            aws_secret_access_key=settings.aws_secret_access_key,
+        )
+        
+        # Decode the base64 encrypted key
+        try:
+            encrypted_data = base64.b64decode(encrypted_key_reference)
+        except Exception as e:
+            logger.error(f"Error decoding base64 data: {e}")
+            raise
+        
+        # Decrypt the key reference
+        response = kms.decrypt(
+            CiphertextBlob=encrypted_data,
+            KeyId=settings.aws_kms_key_id
+        )
+        
+        # Get the decrypted key
+        decrypted_key = response['Plaintext'].decode('utf-8')
+        
+        # Log the first few characters for debugging
+        logger.info(f"Successfully decrypted API key with KMS (first 5 chars): {decrypted_key[:5]}...")
+        
+        return decrypted_key
+    except Exception as e:
+        logger.error(f"Error decrypting API key with KMS: {e}")
+        logger.error(f"KMS configuration: region={settings.aws_region}, endpoint={settings.aws_endpoint_url}, key_id={settings.aws_kms_key_id}")
+        raise

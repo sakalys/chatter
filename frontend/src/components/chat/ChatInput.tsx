@@ -23,10 +23,6 @@ export function ChatInput({
     configuredProviders.includes(model.provider)
   );
 
-  console.log('Configured providers:', configuredProviders);
-  console.log('Available models:', availableModels);
-  console.log('Selected model:', selectedModel);
-
   useEffect(() => {
     if (availableModels.length > 0 && !availableModels.find(m => m.id === selectedModel)) {
       onModelChange?.(availableModels[0].id);

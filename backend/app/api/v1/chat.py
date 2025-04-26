@@ -1,7 +1,8 @@
+import logging # Import logging
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body # Import Query and Body
 
 from app.core.dependencies import DB, get_current_user
 from app.models.user import User
@@ -12,8 +13,9 @@ from app.schemas.chat import ChatCompletionRequest
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__) # Get logger
 
-@router.post("/generate", response_model=dict[str, Any])
+@router.api_route("/generate", methods=["GET", "POST"], response_model=dict[str, Any])
 async def generate_chat_response(
     request: ChatCompletionRequest,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -28,10 +30,13 @@ async def generate_chat_response(
     Returns:
         Response from the LLM provider or SSE response
     """
+    logger.info(f"Received chat generation request: {request}") # Log request
+
     # Convert api_key_id string to UUID
     try:
         api_key_uuid = UUID(request.api_key_id)
     except ValueError:
+        logger.error(f"Invalid API key ID format: {request.api_key_id}") # Log error
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid API key ID format",
@@ -40,11 +45,13 @@ async def generate_chat_response(
     # Check if API key exists and belongs to user
     api_key = await get_api_key_by_id(db, api_key_uuid, current_user.id)
     if not api_key:
+        logger.error(f"API key not found for ID: {api_key_uuid}") # Log error
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="API key not found",
         )
     
+    logger.info("Calling handle_chat_request") # Log before calling service
     # Handle chat request
     response = await handle_chat_request(
         db=db,
@@ -55,6 +62,7 @@ async def generate_chat_response(
         api_key=api_key,
         stream=request.stream,
     )
+    logger.info("Finished handle_chat_request") # Log after calling service
     
     return response
 

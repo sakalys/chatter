@@ -34,6 +34,7 @@ services:
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_REGION=us-east-1
+      - AWS_KMS_KEY_ID=alias/chat-api-keys
       - ENV=development
       - TEST_MODE_ENABLED=true
       - SECRET_KEY=changethisinsecretkeytosomethingsecure
@@ -71,8 +72,11 @@ services:
     environment:
       - SERVICES=kms
       - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - INIT_SCRIPTS_PATH=/docker-entrypoint-initaws.d
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./localstack:/docker-entrypoint-initaws.d
     networks:
       - chat-network
 
