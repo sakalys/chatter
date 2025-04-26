@@ -3,26 +3,22 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     build-essential \
-    curl \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Add uv to PATH
-ENV PATH="/root/.local/bin:$PATH"
-
-# Copy project configuration
-COPY pyproject.toml .
-
 # Install Python dependencies
-RUN uv sync --extra dev --extra test
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir alembic
 
 # Copy application code
 COPY . .
 
-# Run the application
-CMD ["uv", "run", "fastapi", "dev", "app/main.py", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Create a non-root user
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Start the application
+CMD ["uv", "run", "fastapi", "dev", "--host", "0.0.0.0", "--port", "8000"]

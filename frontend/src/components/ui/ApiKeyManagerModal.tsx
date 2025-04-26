@@ -84,6 +84,7 @@ export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps)
         keysToSave.push({
           id: existingOpenaiKey?.id,
           provider: 'openai',
+          name: 'OpenAI API Key',
           key: openaiApiKey,
         });
       }
@@ -93,6 +94,7 @@ export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps)
         keysToSave.push({
           id: existingAnthropicKey?.id,
           provider: 'anthropic',
+          name: 'Anthropic API Key',
           key: anthropicApiKey,
         });
       }
@@ -102,6 +104,7 @@ export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps)
         keysToSave.push({
           id: existingGoogleKey?.id,
           provider: 'google',
+          name: 'Google API Key',
           key: googleApiKey,
         });
       }
@@ -119,7 +122,11 @@ export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps)
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${authToken}`,
           },
-          body: JSON.stringify(key),
+          body: JSON.stringify({
+            provider: key.provider,
+            name: key.name,
+            key: key.key,
+          }),
         });
 
         if (!response.ok) {

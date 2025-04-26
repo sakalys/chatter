@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+import uuid
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Text, types
 from sqlalchemy.dialects.postgresql import UUID
@@ -12,7 +13,7 @@ class Message(Base):
 
     __tablename__ = "messages"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
     role = Column(String, nullable=False)  # "user", "assistant", "system", etc.
     content = Column(Text, nullable=False)

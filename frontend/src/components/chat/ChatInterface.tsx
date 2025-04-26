@@ -5,7 +5,6 @@ import { ChatInput } from './ChatInput';
 import { Message, ApiKey } from '../../types'; // Import ApiKey type
 import { modelService } from '../../services/modelService';
 import { useLlm } from '../../context/LlmContext';
-import { LlmSelector } from '../ui/LlmSelector';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 
 interface ChatInterfaceProps {
@@ -23,6 +22,16 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]); // New state for API keys
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4'); // Add selectedModel state
+
+  // Get unique providers from API keys
+  const configuredProviders = [...new Set(apiKeys.map(key => key.provider))];
+
+  // Handle model change
+  const handleModelChange = (modelId: string) => {
+    console.log('Model changed to:', modelId);
+    setSelectedModel(modelId);
+  };
 
   // Fetch messages if conversationId is in the URL and fetch API keys
   useEffect(() => {
@@ -122,12 +131,14 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
     }
 
     try {
-      // Determine which provider's API key to use based on selectedLlm
+      // Determine which provider's API key to use based on selectedModel
       let provider = 'openai';
-      if (selectedLlm?.id.startsWith('claude-')) {
+      if (selectedModel.startsWith('claude-')) {
         provider = 'anthropic';
-      } else if (selectedLlm?.id.startsWith('llama-')) {
+      } else if (selectedModel.startsWith('llama-')) {
         provider = 'meta';
+      } else if (selectedModel.startsWith('gemini-')) {
+        provider = 'google';
       }
 
       // Find the API key ID for the selected provider
@@ -145,7 +156,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
       // Call the model service
       const response = await modelService.sendChatCompletion({
         conversationId: conversationId,
-        model: selectedLlm?.id || 'gpt-4',
+        model: selectedModel,
         message: content,
         apiKey: apiKey.id // Pass the API key ID
       });
@@ -164,7 +175,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
         content: response.message.content,
         timestamp: new Date(response.message.created_at),
         created_at: response.message.created_at,
-        model: response.message.model || selectedLlm?.id || 'GPT-4'
+        model: response.message.model || selectedModel
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -190,14 +201,6 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
       {/* Header with Conversation Title and LLM Selector */}
       <div className="p-4 flex items-center justify-between border-b border-gray-200">
         <h2 className="text-xl font-bold text-gray-800">{conversationId ? `Conversation ${conversationId.substring(0, 8)}...` : 'New Conversation'}</h2>
-        <div className="flex items-center space-x-2">
-          <LlmSelector />
-          <button className="p-2 rounded-md hover:bg-gray-200" onClick={() => setIsApiKeyModalOpen(true)}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M11.49 3.17C10.237 1.586 8.742 1 7 1 4.291 1 2 3.291 2 6v14h14V6c0-1.742-.586-3.237-2.17-4.49zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -229,7 +232,10 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
       <ChatInput
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
-        apiKeysLoaded={apiKeys.length > 0} // Pass API keys loaded status
+        apiKeysLoaded={apiKeys.length > 0}
+        configuredProviders={configuredProviders}
+        selectedModel={selectedModel}
+        onModelChange={handleModelChange}
       />
       {/* API Key Manager Modal */}
       <ApiKeyManagerModal

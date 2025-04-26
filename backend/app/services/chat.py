@@ -16,6 +16,7 @@ from app.services.conversation import add_message_to_conversation
 # Define the LLM provider API endpoints
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
+GOOGLE_API_URL = "https://generativelanguage.googleapis.com/v1/models"
 
 
 async def _generate_openai_response(
@@ -75,6 +76,57 @@ async def _generate_anthropic_response(
     raise NotImplementedError("Anthropic API integration not yet implemented")
 
 
+async def _generate_google_response(
+    messages: list[dict[str, str]],
+    model: str,
+    api_key: str,
+    stream: bool = False,
+) -> dict[str, Any]:
+    """
+    Generate a chat response from the Google API.
+
+    Args:
+        messages: List of messages in the conversation
+        model: Model to use for generation
+        api_key: Decrypted Google API key
+        stream: Whether to stream the response
+
+    Returns:
+        Response from the Google API
+    """
+    headers = {
+        "Content-Type": "application/json",
+    }
+    
+    # Format messages for Google's API
+    formatted_messages = []
+    for msg in messages:
+        if msg["role"] == "user":
+            formatted_messages.append({"role": "user", "parts": [{"text": msg["content"]}]})
+        elif msg["role"] == "assistant":
+            formatted_messages.append({"role": "model", "parts": [{"text": msg["content"]}]})
+        elif msg["role"] == "system":
+            formatted_messages.append({"role": "user", "parts": [{"text": f"System: {msg['content']}"}]})
+
+    payload = {
+        "contents": formatted_messages,
+        "generationConfig": {
+            "temperature": 0.7,
+            "topK": 40,
+            "topP": 0.95,
+            "maxOutputTokens": 1024,
+        },
+    }
+
+    url = f"{GOOGLE_API_URL}/{model}:generateContent?key={api_key}"
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=payload)
+
+    response.raise_for_status()
+    return response.json()
+
+
 async def generate_chat_response(
     conversation: Conversation,
     messages: list[Message],
@@ -114,6 +166,10 @@ async def generate_chat_response(
         )
     if api_key.provider == "anthropic":
         return await _generate_anthropic_response(
+            formatted_messages, model, decrypted_key, stream
+        )
+    if api_key.provider == "google":
+        return await _generate_google_response(
             formatted_messages, model, decrypted_key, stream
         )
     # If the provider is not supported, raise an error

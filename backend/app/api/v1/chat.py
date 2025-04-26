@@ -79,4 +79,9 @@ async def list_available_models():
             {"id": "claude-2.0", "name": "Claude 2.0"},
             {"id": "claude-instant-1.2", "name": "Claude Instant 1.2"},
         ],
+        "google": [
+            {"id": "gemini-2.5-flash-preview-04-17", "name": "Gemini 2.5 Flash"},
+            {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash"},
+            {"id": "gemini-2.5-pro-preview-03-25", "name": "Gemini 2.5 Pro"},
+        ],
     }

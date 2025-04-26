@@ -65,12 +65,8 @@ async def create_api_key(
     Returns:
         Created API key object
     """
-    # In development, skip KMS encryption for easier setup
-    if settings.env == "development":
-        key_reference = f"mock-encrypted-{api_key_in.key}" # Store a mock reference
-    else:
-        # Encrypt the API key using AWS KMS in other environments
-        key_reference = encrypt_api_key(api_key_in.key)
+    # Always encrypt the API key using AWS KMS
+    key_reference = encrypt_api_key(api_key_in.key)
     
     api_key = ApiKey(
         user_id=user_id,
@@ -145,40 +141,22 @@ def encrypt_api_key(api_key: str) -> str:
         aws_secret_access_key=settings.aws_secret_access_key,  # For LocalStack
     )
     
-    # In a real production environment, you would use a KMS key that you've created
-    # For LocalStack, we'll create a key if it doesn't exist
-    if settings.env == "development":
-        # Check if we have a key alias already
-        try:
-            response = kms_client.describe_key(KeyId='alias/chat-platform-key')
-            key_id = response['KeyMetadata']['KeyId']
-        except Exception:
-            # Create a new key
-            response = kms_client.create_key(
-                Description='Chat Platform API Key Encryption Key',
-                KeyUsage='ENCRYPT_DECRYPT',
-                Origin='AWS_KMS',
-            )
-            key_id = response['KeyMetadata']['KeyId']
-            
-            # Create an alias for the key
-            kms_client.create_alias(
-                AliasName='alias/chat-platform-key',
-                TargetKeyId=key_id,
-            )
-    else:
-        # In production, use a pre-created key
-        key_id = 'alias/chat-platform-key'
+    # Use the alias we created for our key
+    key_id = 'alias/chat-platform-key'
     
-    # Encrypt the API key
-    response = kms_client.encrypt(
-        KeyId=key_id,
-        Plaintext=api_key.encode('utf-8'),
-    )
-    
-    # Return the encrypted key as a base64-encoded string
-    import base64
-    return base64.b64encode(response['CiphertextBlob']).decode('utf-8')
+    try:
+        # Encrypt the API key
+        response = kms_client.encrypt(
+            KeyId=key_id,
+            Plaintext=api_key.encode('utf-8'),
+        )
+        
+        # Return the encrypted key as a base64-encoded string
+        import base64
+        return base64.b64encode(response['CiphertextBlob']).decode('utf-8')
+    except Exception as e:
+        print(f"Error encrypting API key: {str(e)}")
+        raise
 
 
 def decrypt_api_key(encrypted_key_reference: str) -> str:

@@ -6,7 +6,8 @@ interface ChatInputProps {
   isLoading?: boolean;
   selectedModel?: string;
   onModelChange?: (model: string) => void;
-  apiKeysLoaded?: boolean; // Add apiKeysLoaded prop
+  apiKeysLoaded?: boolean;
+  configuredProviders?: string[];
 }
 
 export function ChatInput({ 
@@ -14,8 +15,23 @@ export function ChatInput({
   isLoading = false,
   selectedModel = 'gpt-4',
   onModelChange,
+  configuredProviders = [],
 }: ChatInputProps) {
   const [message, setMessage] = useState('Test message');
+
+  const availableModels = AVAILABLE_MODELS.filter(model => 
+    configuredProviders.includes(model.provider)
+  );
+
+  console.log('Configured providers:', configuredProviders);
+  console.log('Available models:', availableModels);
+  console.log('Selected model:', selectedModel);
+
+  useEffect(() => {
+    if (availableModels.length > 0 && !availableModels.find(m => m.id === selectedModel)) {
+      onModelChange?.(availableModels[0].id);
+    }
+  }, [configuredProviders, selectedModel, availableModels, onModelChange]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -70,12 +86,17 @@ export function ChatInput({
               className="border border-gray-300 rounded px-2 py-1 text-sm"
               value={selectedModel}
               onChange={(e) => onModelChange && onModelChange(e.target.value)}
+              disabled={availableModels.length === 0}
             >
-              {AVAILABLE_MODELS.map(model => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))}
+              {availableModels.length === 0 ? (
+                <option value="">No models available</option>
+              ) : (
+                availableModels.map(model => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>

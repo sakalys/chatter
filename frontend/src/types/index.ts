@@ -92,5 +92,26 @@ export const AVAILABLE_MODELS: Model[] = [
     provider: 'meta',
     description: 'Meta\'s largest open model',
     requiresApiKey: true
+  },
+  {
+    id: 'gemini-2.5-flash-preview-04-17',
+    name: 'Gemini 2.5 Flash',
+    provider: 'google',
+    description: 'Google\'s fastest Gemini model',
+    requiresApiKey: true
+  },
+  {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
+    provider: 'google',
+    description: 'Google\'s efficient Gemini model',
+    requiresApiKey: true
+  },
+  {
+    id: 'gemini-2.5-pro-preview-03-25',
+    name: 'Gemini 2.5 Pro',
+    provider: 'google',
+    description: 'Google\'s advanced Gemini model',
+    requiresApiKey: true
   }
 ];

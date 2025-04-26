@@ -10,7 +10,7 @@ function App() {
   const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true); // New state to track auth loading
-  const [isCreatingNewConversation, setIsCreatingNewConversation] = useState(false); // State for placeholder
+  const [setIsCreatingNewConversation] = useState(false); // State for placeholder
   const navigate = useNavigate();
 
   useEffect(() => {

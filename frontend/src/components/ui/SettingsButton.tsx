@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ApiKeyModal } from './ApiKeyModal';
+import { ApiKeyManagerModal } from './ApiKeyManagerModal';
 import { McpConfigModal } from './McpConfigModal';
 
 interface McpConfig {
@@ -12,14 +12,7 @@ export function SettingsButton() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isMcpConfigModalOpen, setIsMcpConfigModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [mcpConfigs, setMcpConfigs] = useState<McpConfig[]>([]);
-  
-  const handleApiKeySave = (keys: Record<string, string>) => {
-    setApiKeys(keys);
-    // In a real app, you would save these to localStorage or a backend
-    localStorage.setItem('apiKeys', JSON.stringify(keys));
-  };
   
   const handleMcpConfigSave = (configs: McpConfig[]) => {
     setMcpConfigs(configs);
@@ -90,11 +83,9 @@ export function SettingsButton() {
         </div>
       )}
       
-      <ApiKeyModal
+      <ApiKeyManagerModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
-        onSave={handleApiKeySave}
-        initialKeys={apiKeys}
       />
       
       <McpConfigModal
