@@ -1,3 +1,5 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -12,14 +14,15 @@ router = APIRouter()
 
 @router.get("/configured", response_model=List[MCPConfigResponse])
 async def get_configured_llms(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
   """
   Get a list of configured LLMs for the current user based on available API keys.
   """
-  # Fetch all MCP configs for the current user
-  mcp_configs = db.query(MCPConfig).filter(MCPConfig.user_id == current_user.id).all()
+  # Fetch all MCP configs for the current user asynchronously
+  result = await db.execute(select(MCPConfig).where(MCPConfig.user_id == current_user.id))
+  mcp_configs = result.scalars().all() # Correctly fetch all results asynchronously
 
   # Fetch configured API keys for the current user
   api_keys = await get_api_keys_by_user(db, current_user.id)
@@ -30,7 +33,7 @@ async def get_configured_llms(
       config for config in mcp_configs
       if config.configuration and config.configuration.get("type") == "llm" and
          # Assuming provider can be identified from the MCP config URL or configuration
-         any(provider in config.url.lower() or (config.configuration.get("provider") == provider if config.configuration else False) for provider in configured_providers)
+         any(provider in (config.url.lower() if config.url else "") or (config.configuration.get("provider") == provider if config.configuration else False) for provider in configured_providers)
   ]
 
   return configured_llms

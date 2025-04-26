@@ -30,7 +30,7 @@ export function SettingsButton() {
   const handleLogout = async () => {
     try {
       // Call the backend logout endpoint
-      await fetch('/api/v1/auth/logout', {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/logout`, {
         method: 'POST',
       });
 

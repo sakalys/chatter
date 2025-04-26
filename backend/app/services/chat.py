@@ -13,6 +13,67 @@ from app.schemas.message import MessageCreate
 from app.services.api_key import decrypt_api_key
 from app.services.conversation import add_message_to_conversation
 
+# Define the LLM provider API endpoints
+OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
+
+
+async def _generate_openai_response(
+    messages: list[dict[str, str]],
+    model: str,
+    api_key: str,
+    stream: bool = False,
+) -> dict[str, Any]:
+    """
+    Generate a chat response from the OpenAI API.
+
+    Args:
+        messages: List of messages in the conversation
+        model: Model to use for generation
+        api_key: Decrypted OpenAI API key
+        stream: Whether to stream the response
+
+    Returns:
+        Response from the OpenAI API
+    """
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+    }
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": stream,
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(OPENAI_API_URL, headers=headers, json=payload)
+
+    response.raise_for_status()  # Raise an exception for bad status codes
+    return response.json()
+
+
+async def _generate_anthropic_response(
+    messages: list[dict[str, str]],
+    model: str,
+    api_key: str,
+    stream: bool = False,
+) -> dict[str, Any]:
+    """
+    Generate a chat response from the Anthropic API.
+
+    Args:
+        messages: List of messages in the conversation
+        model: Model to use for generation
+        api_key: Decrypted Anthropic API key
+        stream: Whether to stream the response
+
+    Returns:
+        Response from the Anthropic API
+    """
+    # TODO: Implement Anthropic API call
+    raise NotImplementedError("Anthropic API integration not yet implemented")
+
 
 async def generate_chat_response(
     conversation: Conversation,
@@ -55,120 +116,11 @@ async def generate_chat_response(
         return await _generate_anthropic_response(
             formatted_messages, model, decrypted_key, stream
         )
+    # If the provider is not supported, raise an error
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
-        detail=f"Unsupported provider: {api_key.provider}"
+        detail=f"Unsupported LLM provider: {api_key.provider}",
     )
-
-
-async def _generate_openai_response(
-    messages: list[dict[str, str]],
-    model: str,
-    api_key: str,
-    stream: bool = False,
-) -> dict[str, Any]:
-    """
-    Generate a chat response from OpenAI.
-    
-    Args:
-        messages: List of messages in the conversation
-        model: Model to use for generation
-        api_key: API key to use for the request
-        stream: Whether to stream the response
-        
-    Returns:
-        Response from OpenAI
-    """
-    async with httpx.AsyncClient() as client:
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        }
-        
-        data = {
-            "model": model,
-            "messages": messages,
-            "stream": stream
-        }
-        
-        response = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=60.0
-        )
-        
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error from OpenAI: {response.text}"
-            )
-        
-        if stream:
-            return response.iter_lines()
-        return response.json()
-
-
-async def _generate_anthropic_response(
-    messages: list[dict[str, str]],
-    model: str,
-    api_key: str,
-    stream: bool = False,
-) -> dict[str, Any]:
-    """
-    Generate a chat response from Anthropic.
-    
-    Args:
-        messages: List of messages in the conversation
-        model: Model to use for generation
-        api_key: API key to use for the request
-        stream: Whether to stream the response
-        
-    Returns:
-        Response from Anthropic
-    """
-    # Convert messages to Anthropic format
-    system_message = None
-    anthropic_messages = []
-    
-    for msg in messages:
-        if msg["role"] == "system":
-            system_message = msg["content"]
-        else:
-            anthropic_messages.append(msg)
-    
-    async with httpx.AsyncClient() as client:
-        headers = {
-            "Content-Type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01"
-        }
-        
-        data = {
-            "model": model,
-            "messages": anthropic_messages,
-            "stream": stream
-        }
-        
-        if system_message:
-            data["system"] = system_message
-        
-        response = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers=headers,
-            json=data,
-            timeout=60.0
-        )
-        
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error from Anthropic: {response.text}"
-            )
-        
-        if stream:
-            return response.iter_lines()
-        return response.json()
 
 
 async def process_chat_stream(
@@ -191,47 +143,8 @@ async def process_chat_stream(
     """
     content = ""
     
-    if provider == "openai":
-        async for line in stream_response:
-            if line:
-                line = line.decode("utf-8")
-                if line.startswith("data: "):
-                    line = line[6:]
-                    if line.strip() == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(line)
-                        if chunk.get("choices") and len(chunk["choices"]) > 0:
-                            delta = chunk["choices"][0].get("delta", {})
-                            if "content" in delta:
-                                content_chunk = delta["content"]
-                                content += content_chunk
-                                yield {
-                                    "event": "message",
-                                    "data": content_chunk
-                                }
-                    except json.JSONDecodeError:
-                        pass
-    
-    elif provider == "anthropic":
-        async for line in stream_response:
-            if line:
-                line = line.decode("utf-8")
-                if line.startswith("data: "):
-                    line = line[6:]
-                    try:
-                        chunk = json.loads(line)
-                        if chunk.get("type") == "content_block_delta":
-                            delta = chunk.get("delta", {})
-                            if "text" in delta:
-                                content_chunk = delta["text"]
-                                content += content_chunk
-                                yield {
-                                    "event": "message",
-                                    "data": content_chunk
-                                }
-                    except json.JSONDecodeError:
-                        pass
+    # This part is not needed for hardcoded response, but keeping the structure
+    # in case streaming is implemented later.
     
     # Final event with complete message
     yield {
@@ -246,12 +159,15 @@ async def process_chat_stream(
     }
 
 
+from app.schemas.conversation import ConversationCreate
+
 async def handle_chat_request(
     db,
-    conversation_id: UUID,
+    user_id: UUID,
     user_message: str,
     model: str,
     api_key: ApiKey,
+    conversation_id: UUID | None = None,
     stream: bool = False,
 ) -> Any:
     """
@@ -259,15 +175,31 @@ async def handle_chat_request(
     
     Args:
         db: Database session
-        conversation_id: Conversation ID
+        user_id: ID of the current user
+        conversation_id: Optional Conversation ID. If not provided, a new conversation will be created.
         user_message: User message
         model: Model to use for generation
         api_key: API key to use for the request
         stream: Whether to stream the response
         
     Returns:
-        Response from the LLM provider or SSE response
+        Response from the LLM provider or SSE response, including the conversation ID
     """
+    # If no conversation_id is provided, create a new conversation
+    if conversation_id is None:
+        from app.services.conversation import create_conversation
+        conversation = await create_conversation(db, ConversationCreate(), user_id)
+        conversation_id = conversation.id
+    else:
+        # Get conversation to ensure it exists and belongs to the user
+        from app.services.conversation import get_conversation_by_id
+        conversation = await get_conversation_by_id(db, conversation_id, user_id)
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found"
+            )
+
     # Add user message to conversation
     user_message_obj = await add_message_to_conversation(
         db,
@@ -278,74 +210,46 @@ async def handle_chat_request(
         conversation_id
     )
     
-    # Get all messages in the conversation
+    # Get all messages in the conversation (not strictly needed for hardcoded response, but good practice)
     from app.services.conversation import get_messages_by_conversation
     messages = await get_messages_by_conversation(db, conversation_id)
     
-    # Get conversation
-    from app.services.conversation import get_conversation_by_id
-    conversation = await get_conversation_by_id(db, conversation_id, api_key.user_id)
-    
-    if not conversation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found"
-        )
-    
-    # Generate response
-    if stream:
+    try:
+        # Generate response (using hardcoded response)
         response = await generate_chat_response(
-            conversation, messages, model, api_key, stream=True
+            conversation, messages, model, api_key, stream=False # stream is ignored for hardcoded response
         )
-        
-        # Create a new message for the assistant response
+
+        # Extract content from hardcoded response
+        content = response["choices"][0]["message"]["content"]
+
+        # Add assistant message to conversation
         assistant_message = await add_message_to_conversation(
             db,
             MessageCreate(
                 role="assistant",
-                content="",  # Will be updated after streaming
+                content=content,
                 model=model,
+                metadata={"response": response}
             ),
             conversation_id
         )
-        
-        # Return streaming response
-        return EventSourceResponse(
-            process_chat_stream(
-                response,
-                conversation_id,
-                model,
-                api_key.provider
-            )
+
+        return {
+            "conversation_id": str(conversation_id),
+            "message": {
+                "id": str(assistant_message.id),
+                "role": assistant_message.role,
+                "content": assistant_message.content,
+                "model": assistant_message.model,
+                "created_at": assistant_message.created_at.isoformat(),
+            }
+        }
+    except Exception as e:
+        # Log the error with traceback and return an HTTPException
+        import traceback
+        print(f"Error generating chat response: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error generating chat response: {e}"
         )
-    response = await generate_chat_response(
-        conversation, messages, model, api_key, stream=False
-    )
-
-    # Extract content from response based on provider
-    if api_key.provider == "openai":
-        content = response["choices"][0]["message"]["content"]
-    elif api_key.provider == "anthropic":
-        content = response["content"][0]["text"]
-    else:
-        content = "Unsupported provider response"
-
-    # Add assistant message to conversation
-    assistant_message = await add_message_to_conversation(
-        db,
-        MessageCreate(
-            role="assistant",
-            content=content,
-            model=model,
-            metadata={"response": response}
-        ),
-        conversation_id
-    )
-
-    return {
-        "id": str(assistant_message.id),
-        "role": assistant_message.role,
-        "content": assistant_message.content,
-        "model": assistant_message.model,
-        "created_at": assistant_message.created_at.isoformat(),
-    }

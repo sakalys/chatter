@@ -1,4 +1,4 @@
-import { useState, FormEvent, KeyboardEvent } from 'react';
+import { useState, FormEvent, KeyboardEvent, useEffect } from 'react';
 import { AVAILABLE_MODELS } from '../../types';
 
 interface ChatInputProps {
@@ -6,15 +6,16 @@ interface ChatInputProps {
   isLoading?: boolean;
   selectedModel?: string;
   onModelChange?: (model: string) => void;
+  apiKeysLoaded?: boolean; // Add apiKeysLoaded prop
 }
 
 export function ChatInput({ 
   onSendMessage, 
   isLoading = false,
   selectedModel = 'gpt-4',
-  onModelChange
+  onModelChange,
 }: ChatInputProps) {
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState('Test message');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();

@@ -10,7 +10,10 @@ from app.db.base import Base
 class Message(Base):
     """Model for storing chat messages."""
 
-    conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversation.id", ondelete="CASCADE"), nullable=False)
+    __tablename__ = "messages"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True)
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
     role = Column(String, nullable=False)  # "user", "assistant", "system", etc.
     content = Column(Text, nullable=False)
     model = Column(String, nullable=True)  # The model used for this message (if assistant)

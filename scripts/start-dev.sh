@@ -14,6 +14,6 @@ echo "Copying scripts to backend container..."
 ./scripts/copy-scripts.sh
 
 echo "Development environment is ready!"
-echo "Frontend: http://localhost:3000"
+echo "Frontend: http://localhost:5173"
 echo "Backend API: http://localhost:8000"
 echo "API Documentation: http://localhost:8000/docs"

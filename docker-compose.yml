@@ -4,17 +4,16 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
       - backend
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://backend:8000
     networks:
       - chat-network
-    user: "1000:1000"
 
   backend:
     build:
@@ -73,7 +72,7 @@ services:
       - SERVICES=kms
       - DEBUG=1
     volumes:
-      - ./localstack:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - chat-network
 

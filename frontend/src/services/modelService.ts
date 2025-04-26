@@ -1,77 +1,64 @@
-import { Message, MessageRole } from '../types';
+import { McpConfig, ChatCompletionRequest, ChatCompletionResponse } from '../types';
 
-interface ChatCompletionRequest {
-  model: string;
-  messages: {
-    role: MessageRole;
-    content: string;
-  }[];
-  apiKey: string;
-}
-
-interface ChatCompletionResponse {
-  id: string;
-  model: string;
-  content: string;
-}
-
-// This is a mock service that simulates API calls to different model providers
-// In a real application, this would make actual API calls to OpenAI, Anthropic, etc.
+// This service handles communication with the backend for chat completions and LLM configuration.
 export const modelService = {
-  // Send a chat completion request to the appropriate model provider
+  // Send a chat completion request to the backend.
   async sendChatCompletion(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
-    const { model, messages, apiKey } = request;
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check if API key is provided
-    if (!apiKey) {
-      throw new Error(`API key is required for model ${model}`);
+    const { conversationId, model, message, apiKey } = request;
+
+    const authToken = localStorage.getItem('authToken'); // Get token from local storage
+
+    if (!authToken) {
+      console.warn('Authentication token not found in local storage. User might not be logged in.');
+      throw new Error('Authentication token not found.');
     }
-    
-    // Determine which provider to use based on the model
-    if (model.startsWith('gpt-')) {
-      return this.mockOpenAIResponse(model, messages);
-    } else if (model.startsWith('claude-')) {
-      return this.mockAnthropicResponse(model, messages);
-    } else if (model.startsWith('llama-')) {
-      return this.mockMetaResponse(model, messages);
-    } else {
-      throw new Error(`Unsupported model: ${model}`);
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`, // Include token in Authorization header
+      },
+      body: JSON.stringify({
+        conversation_id: conversationId, // Include conversationId if it exists
+        model,
+        message,
+        api_key_id: apiKey, // Assuming apiKey is actually the api_key_id
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error generating chat completion: ${errorData.detail || response.statusText}`);
     }
+
+    return response.json();
   },
-  
-  // Mock OpenAI API response
-  mockOpenAIResponse(model: string, messages: { role: MessageRole; content: string }[]): ChatCompletionResponse {
-    const lastMessage = messages[messages.length - 1];
-    
-    return {
-      id: `chatcmpl-${Date.now()}`,
-      model,
-      content: `This is a simulated response from ${model} to your message: "${lastMessage.content}"`
-    };
-  },
-  
-  // Mock Anthropic API response
-  mockAnthropicResponse(model: string, messages: { role: MessageRole; content: string }[]): ChatCompletionResponse {
-    const lastMessage = messages[messages.length - 1];
-    
-    return {
-      id: `msg-${Date.now()}`,
-      model,
-      content: `This is a simulated response from ${model} to your message: "${lastMessage.content}"`
-    };
-  },
-  
-  // Mock Meta API response
-  mockMetaResponse(model: string, messages: { role: MessageRole; content: string }[]): ChatCompletionResponse {
-    const lastMessage = messages[messages.length - 1];
-    
-    return {
-      id: `llama-${Date.now()}`,
-      model,
-      content: `This is a simulated response from ${model} to your message: "${lastMessage.content}"`
-    };
+
+  // Fetch configured LLMs from the backend
+  async getConfiguredLlms(): Promise<McpConfig[]> {
+    try {
+      const authToken = localStorage.getItem('authToken'); // Get token from local storage
+
+      if (!authToken) {
+        console.warn('Authentication token not found in local storage. User might not be logged in.');
+        // Depending on the application flow, you might want to redirect to login here
+        return []; // Return empty array if no token
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/llms/configured`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`, // Include token in Authorization header
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const configuredLlms: McpConfig[] = await response.json();
+      return configuredLlms;
+    } catch (error) {
+      console.error('Error fetching configured LLMs:', error);
+      throw error; // Re-throw the error to be handled by the caller
+    }
   }
 };

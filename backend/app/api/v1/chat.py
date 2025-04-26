@@ -8,43 +8,37 @@ from app.models.user import User
 from app.services.api_key import get_api_key_by_id
 from app.services.chat import handle_chat_request
 from app.services.conversation import get_conversation_by_id
+from app.schemas.chat import ChatCompletionRequest
 
 router = APIRouter()
 
 
-@router.post("/{conversation_id}/generate", response_model=dict[str, Any])
+@router.post("/generate", response_model=dict[str, Any])
 async def generate_chat_response(
-    conversation_id: UUID,
-    message: str,
-    model: str,
-    api_key_id: UUID,
+    request: ChatCompletionRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: DB,
-    stream: bool = False,
 ):
     """
-    Generate a chat response for a specific conversation.
+    Generate a chat response.
     
     Args:
-        conversation_id: Conversation ID
-        message: User message
-        model: Model to use for generation
-        api_key_id: API key ID to use for the request
-        stream: Whether to stream the response
+        request: The request body containing message, model, api_key_id, conversation_id, and stream.
         
     Returns:
         Response from the LLM provider or SSE response
     """
-    # Check if conversation exists and belongs to user
-    conversation = await get_conversation_by_id(db, conversation_id, current_user.id)
-    if not conversation:
+    # Convert api_key_id string to UUID
+    try:
+        api_key_uuid = UUID(request.api_key_id)
+    except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid API key ID format",
         )
-    
+
     # Check if API key exists and belongs to user
-    api_key = await get_api_key_by_id(db, api_key_id, current_user.id)
+    api_key = await get_api_key_by_id(db, api_key_uuid, current_user.id)
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -54,11 +48,12 @@ async def generate_chat_response(
     # Handle chat request
     response = await handle_chat_request(
         db=db,
-        conversation_id=conversation_id,
-        user_message=message,
-        model=model,
+        user_id=current_user.id, # Pass user_id to service
+        conversation_id=request.conversation_id,
+        user_message=request.message,
+        model=request.model,
         api_key=api_key,
-        stream=stream,
+        stream=request.stream,
     )
     
     return response

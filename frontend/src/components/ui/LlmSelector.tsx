@@ -1,27 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useLlm } from '../../context/LlmContext';
+import { modelService } from '../../services/modelService';
+import { McpConfig } from '../../types';
 
 interface LlmSelectorProps {
   // TODO: Add props for handling LLM selection
 }
 
-interface Llm {
-  id: string;
-  name: string;
-}
-
 export function LlmSelector({}: LlmSelectorProps) {
-  const [llms, setLlms] = useState<Llm[]>([]);
+  const [llms, setLlms] = useState<McpConfig[]>([]);
   const { selectedLlm, setSelectedLlm } = useLlm();
 
   useEffect(() => {
     const fetchLlms = async () => {
       try {
-        const response = await fetch('/api/v1/llms/configured');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const configuredLlms: Llm[] = await response.json();
+        const configuredLlms = await modelService.getConfiguredLlms();
         setLlms(configuredLlms);
         // Set a default selected LLM (e.g., the first one) if none is selected
         if (configuredLlms.length > 0 && !selectedLlm) {

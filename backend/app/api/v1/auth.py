@@ -6,11 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.config import settings
-from app.core.dependencies import DB
+from app.core.dependencies import DB, get_current_user
 from app.core.security import create_access_token
 from app.schemas.auth import Token
 from app.schemas.user import UserCreate, UserResponse
 from app.services.user import authenticate_user, create_user, get_user_by_email
+from app.models.user import User
 
 router = APIRouter()
 
@@ -157,3 +158,13 @@ async def logout():
     Logout the current user by invalidating the token (client-side).
     """
     return {"message": "Logout successful"}
+
+@router.get("/validate")
+async def validate_token(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    Validate the current user's token.
+    Returns 200 OK if the token is valid, 401 Unauthorized otherwise.
+    """
+    return {"valid": True}

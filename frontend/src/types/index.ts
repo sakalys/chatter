@@ -6,17 +6,20 @@ export interface Message {
   content: string;
   timestamp: Date;
   model?: string;
+  created_at: string; // Add created_at property
 }
 
 export interface Conversation {
   id: string;
-  title: string;
-  messages: Message[];
-  lastUpdated: Date;
-  model: string;
+  title: string | null;
+  user_id: string;
+  // messages: Message[]; // Messages are fetched separately
+  // lastUpdated: Date; // Add if needed
+  // model: string; // Add if needed
 }
 
 export interface ApiKey {
+  id: string; // Add id property
   provider: string;
   key: string;
 }
@@ -40,6 +43,19 @@ export interface Model {
   description: string;
   requiresApiKey: boolean;
 }
+
+export interface ChatCompletionRequest {
+  conversationId?: string; // Optional conversation ID
+  model: string;
+  message: string; // Send single message content
+  apiKey: string;
+}
+
+export interface ChatCompletionResponse {
+  conversation_id: string;
+  message: Message;
+}
+
 
 export const AVAILABLE_MODELS: Model[] = [
   {

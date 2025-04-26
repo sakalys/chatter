@@ -1,68 +1,119 @@
-import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { MainLayout } from './components/layout/MainLayout';
 import { ChatInterface } from './components/chat/ChatInterface';
-import { SettingsButton } from './components/ui/SettingsButton';
 import LoginPage from './components/auth/LoginPage';
+import LoadingSpinner from './components/ui/LoadingSpinner'; // Assuming a LoadingSpinner component exists
 
 function App() {
   const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true); // New state to track auth loading
+  const [isCreatingNewConversation, setIsCreatingNewConversation] = useState(false); // State for placeholder
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (bypassAuth) {
-      // Call the backend test login endpoint to get a token
-      fetch('http://localhost:8000/api/v1/auth/test-login', {
-        method: 'POST',
-      })
-        .then(response => {
+    const validateToken = async (token: string) => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/validate`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        return response.ok;
+      } catch (error) {
+        console.error('Error validating token:', error);
+        return false;
+      }
+    };
+
+    const authenticate = async () => {
+      if (bypassAuth) {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/test-login`, {
+            method: 'POST',
+          });
           if (!response.ok) {
             throw new Error('Failed to get test token');
           }
-          return response.json();
-        })
-        .then(data => {
+          const data = await response.json();
           localStorage.setItem('authToken', data.access_token);
-          console.log('Obtained test token and stored in localStorage.');
-        })
-        .catch(error => {
+          setAuthToken(data.access_token);
+          console.log('Obtained test token and stored in localStorage and state.');
+        } catch (error) {
           console.error('Error during test login:', error);
-          // Handle error, maybe show a message to the user
-        });
-    }
-  }, [bypassAuth]);
+          setAuthToken(null);
+        } finally {
+          setLoadingAuth(false); // Set loading to false after fetch
+        }
+      } else {
+        const existingToken = localStorage.getItem('authToken');
+        if (existingToken) {
+          // Validate the existing token
+          const isValid = await validateToken(existingToken);
+          if (isValid) {
+            setAuthToken(existingToken);
+          } else {
+            // If token is invalid, clear it and redirect to login
+            localStorage.removeItem('authToken');
+            navigate('/login');
+          }
+        } else {
+          // No token exists, redirect to login
+          navigate('/login');
+        }
+        setLoadingAuth(false); // Set loading to false if not bypassing auth
+      }
+    };
+
+    authenticate();
+  }, [bypassAuth, navigate]);
+
+  if (loadingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner /> {/* Show loading spinner while authenticating in bypass mode */}
+      </div>
+    );
+  }
 
   return (
     <>
       <Routes>
         {bypassAuth ? (
-          <Route
-            path="/"
-            element={
-              <MainLayout>
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-                  <h2 className="text-lg font-medium text-gray-900">New Conversation</h2>
-                  <SettingsButton />
-                </div>
-                <ChatInterface />
-              </MainLayout>
-            }
-          />
+          authToken ? ( // Conditionally render if authToken exists
+            <Route
+              path="/"
+              element={
+                <MainLayout
+                  authToken={authToken}
+                  setIsCreatingNewConversation={setIsCreatingNewConversation}
+                >
+                  <ChatInterface setIsCreatingNewConversation={setIsCreatingNewConversation} />
+                </MainLayout>
+              }
+            />
+          ) : (
+            // Optionally render an error message or redirect if test login fails
+            <Route path="/" element={<div>Error obtaining test token.</div>} />
+          )
         ) : (
           <>
             <Route path="/login" element={<LoginPage />} />
             <Route
               path="/"
               element={
-                // This route will likely be protected and redirect to /login if not authenticated
-                // For now, it renders the main layout, but the auth check should happen elsewhere
-                <MainLayout>
-                  <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-                    <h2 className="text-lg font-medium text-gray-900">New Conversation</h2>
-                    <SettingsButton />
-                  </div>
-                  <ChatInterface />
-                </MainLayout>
+                authToken ? ( // Conditionally render if authToken exists
+                  <MainLayout
+                    authToken={authToken}
+                    setIsCreatingNewConversation={setIsCreatingNewConversation}
+                  >
+                    <ChatInterface setIsCreatingNewConversation={setIsCreatingNewConversation} />
+                  </MainLayout>
+                ) : (
+                  <LoginPage /> // Redirect to login if no token
+                )
               }
             />
           </>

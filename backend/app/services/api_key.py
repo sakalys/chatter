@@ -27,7 +27,9 @@ async def get_api_keys_by_user(
 
 
 async def get_api_key_by_id(
-    db: AsyncSession, api_key_id: UUID, user_id: UUID
+    db: AsyncSession, 
+    api_key_id: UUID, 
+    user_id: UUID
 ) -> ApiKey | None:
     """
     Get an API key by ID for a specific user.
@@ -63,8 +65,12 @@ async def create_api_key(
     Returns:
         Created API key object
     """
-    # Encrypt the API key using AWS KMS
-    key_reference = encrypt_api_key(api_key_in.key)
+    # In development, skip KMS encryption for easier setup
+    if settings.env == "development":
+        key_reference = f"mock-encrypted-{api_key_in.key}" # Store a mock reference
+    else:
+        # Encrypt the API key using AWS KMS in other environments
+        key_reference = encrypt_api_key(api_key_in.key)
     
     api_key = ApiKey(
         user_id=user_id,
