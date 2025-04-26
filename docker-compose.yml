@@ -36,6 +36,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_REGION=us-east-1
       - ENV=development
+      - TEST_MODE_ENABLED=true
       - SECRET_KEY=changethisinsecretkeytosomethingsecure
       - UV_CACHE_DIR=/app/.uv_cache
     networks:

@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from typing import Annotated
 
@@ -115,3 +116,44 @@ async def google_login(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during Google login",
         )
+
+@router.post("/test-login", response_model=Token)
+async def test_login(
+    db: DB,
+):
+    """
+    Development endpoint to get an access token for a test user.
+    """
+    test_mode_enabled = os.getenv("TEST_MODE_ENABLED") == "true"
+    print(f"Test mode enabled (os.getenv): {os.getenv('TEST_MODE_ENABLED')}")
+    print(f"Test mode enabled (boolean check): {test_mode_enabled}")
+
+    if not test_mode_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Test mode is not enabled",
+        )
+
+    test_user_email = "testuser@example.com"
+    user = await get_user_by_email(db, test_user_email)
+
+    if not user:
+        # Create a test user if it doesn't exist
+        user_in = UserCreate(email=test_user_email, password=None, full_name="Test User")
+        user = await create_user(db, user_in)
+
+    # Create access token for the test user
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token = create_access_token(
+        subject=str(user.id), expires_delta=access_token_expires
+    )
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/logout")
+async def logout():
+    """
+    Logout the current user by invalidating the token (client-side).
+    """
+    return {"message": "Logout successful"}

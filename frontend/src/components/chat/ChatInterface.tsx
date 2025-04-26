@@ -3,6 +3,9 @@ import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { Message, MessageRole } from '../../types';
 import { modelService } from '../../services/modelService';
+import { useLlm } from '../../context/LlmContext';
+import { LlmSelector } from '../ui/LlmSelector'; // Import LlmSelector
+
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
@@ -11,12 +14,28 @@ export function ChatInterface() {
       role: 'assistant',
       content: 'Hello! How can I help you today?',
       timestamp: new Date(),
-      model: 'GPT-4'
+      model: 'GPT-4' // Default model
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('gpt-4');
+  const { selectedLlm } = useLlm();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+
+  // Update the model of the initial message when selectedLlm is available
+  useEffect(() => {
+    if (selectedLlm && messages.length > 0 && messages[0].id === '1' && messages[0].model === 'GPT-4') {
+      setMessages(prevMessages => {
+        const updatedMessages = [...prevMessages];
+        updatedMessages[0] = {
+          ...updatedMessages[0],
+          model: selectedLlm.id
+        };
+        return updatedMessages;
+      });
+    }
+  }, [selectedLlm, messages]);
+
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -40,11 +59,11 @@ export function ChatInterface() {
       const apiKeysString = localStorage.getItem('apiKeys');
       const apiKeys = apiKeysString ? JSON.parse(apiKeysString) : {};
       
-      // Determine which provider's API key to use
+      // Determine which provider's API key to use based on selectedLlm
       let provider = 'openai';
-      if (selectedModel.startsWith('claude-')) {
+      if (selectedLlm?.id.startsWith('claude-')) {
         provider = 'anthropic';
-      } else if (selectedModel.startsWith('llama-')) {
+      } else if (selectedLlm?.id.startsWith('llama-')) {
         provider = 'meta';
       }
       
@@ -61,10 +80,9 @@ export function ChatInterface() {
         role: 'user',
         content
       });
-      
       // Call the model service
       const response = await modelService.sendChatCompletion({
-        model: selectedModel,
+        model: selectedLlm?.id || 'gpt-4', // Use selectedLlm from context, fallback to gpt-4
         messages: messageHistory,
         apiKey
       });
@@ -75,7 +93,7 @@ export function ChatInterface() {
         role: 'assistant',
         content: response.content,
         timestamp: new Date(),
-        model: response.model || selectedModel
+        model: response.model || selectedLlm?.id || 'GPT-4'
       };
       
       setMessages(prev => [...prev, assistantMessage]);
@@ -96,9 +114,20 @@ export function ChatInterface() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header with "New Conversation" and LLM Selector */}
+      <div className="p-4 flex items-center justify-between border-b border-gray-200"> {/* Added flex and justify-between */}
+        <h2 className="text-xl font-bold text-gray-800">New Conversation</h2> {/* "New Conversation" label */}
+        {/* LLM Selector */}
+        <div className="flex items-center space-x-2"> {/* Adjusted styling */}
+          <LlmSelector />
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto">
         <div className="pb-4">
-          {messages.map((message) => (
+          {messages
+            .filter(message => message.content !== 'New Conversation') // Filter out messages with "New Conversation" content
+            .map((message) => (
             <ChatMessage
               key={message.id}
               role={message.role}
@@ -122,11 +151,9 @@ export function ChatInterface() {
           <div ref={messagesEndRef} />
         </div>
       </div>
-      <ChatInput 
-        onSendMessage={handleSendMessage} 
+      <ChatInput
+        onSendMessage={handleSendMessage}
         isLoading={isLoading}
-        selectedModel={selectedModel}
-        onModelChange={setSelectedModel}
       />
     </div>
   );

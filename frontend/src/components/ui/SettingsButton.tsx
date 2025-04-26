@@ -26,6 +26,24 @@ export function SettingsButton() {
     // In a real app, you would save these to localStorage or a backend
     localStorage.setItem('mcpConfigs', JSON.stringify(configs));
   };
+
+  const handleLogout = async () => {
+    try {
+      // Call the backend logout endpoint
+      await fetch('/api/v1/auth/logout', {
+        method: 'POST',
+      });
+
+      // Clear the token from local storage
+      localStorage.removeItem('access_token');
+
+      // Redirect to the login page
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Optionally, display an error message to the user
+    }
+  };
   
   return (
     <div className="relative">
@@ -59,6 +77,15 @@ export function SettingsButton() {
             }}
           >
             MCP Configurations
+          </button>
+          <button
+            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            onClick={() => {
+              handleLogout();
+              setIsDropdownOpen(false);
+            }}
+          >
+            Logout
           </button>
         </div>
       )}

@@ -59,6 +59,23 @@ A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. U
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
 
+### Testing without Google Login
+
+For development and testing purposes, you can bypass the Google login process. This is useful for quickly accessing the main application interface without needing to go through the OAuth flow.
+
+To enable the login bypass:
+
+1.  Ensure the backend service is running with the `TEST_MODE_ENABLED` environment variable set to `true`. If you are using `docker-compose.yml`, this is already configured in the `backend` service. If running the backend locally, you need to set this environment variable before starting the backend server.
+
+2.  Run the frontend development server with the `VITE_BYPASS_AUTH` environment variable set to `true`:
+    ```bash
+    cd frontend && VITE_BYPASS_AUTH=true npm run dev
+    ```
+
+When the frontend starts with `VITE_BYPASS_AUTH=true`, it will attempt to obtain a test authentication token from the backend's `/api/v1/auth/test-login` endpoint. If the backend is running with `TEST_MODE_ENABLED=true`, it will provide a token for a test user, allowing you to access the main application.
+
+Note that the test user may not have any LLM configurations or API keys set up by default. You may need to manually add these through the application's settings or directly in the database for full functionality.
+
 ### Managing the Development Environment
 
 To stop the development environment:

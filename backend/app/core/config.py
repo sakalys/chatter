@@ -1,9 +1,11 @@
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
+from pydantic import ConfigDict
 
 
 class Settings(BaseModel):
     """Application settings."""
+
+    model_config = ConfigDict(env_file=None, extra='ignore')
     
     # API settings
     api_title: str = "Chat Platform API"
@@ -13,6 +15,13 @@ class Settings(BaseModel):
     # Environment
     env: str = Field(default="development")
     debug: bool = Field(default=True)
+    test_mode_enabled: bool = Field(default=False)
+
+    @validator('test_mode_enabled', pre=True)
+    def parse_boolean(cls, v):
+        if isinstance(v, str):
+            return v.lower() == 'true'
+        return v
     
     # Security
     secret_key: str = Field(default="changethisinsecretkeytosomethingsecure")
@@ -36,3 +45,5 @@ class Settings(BaseModel):
 
 # Create settings instance
 settings = Settings()
+
+print(f"Settings initialized - test_mode_enabled: {settings.test_mode_enabled}")

@@ -48,10 +48,13 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg">
-        <h3 className="text-2xl font-bold text-center">Login with Google</h3>
-        <div className="flex justify-center mt-4">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black p-6">
+      <div className="relative px-8 py-10 bg-gray-800 bg-opacity-70 backdrop-filter backdrop-blur-lg shadow-2xl rounded-xl w-full max-w-md border border-gray-700">
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-extrabold text-white mb-3 tracking-tight">Moo Point</h1>
+          <h3 className="text-xl font-semibold text-gray-300">Login to your account</h3>
+        </div>
+        <div className="flex justify-center">
           <GoogleLogin
             onSuccess={handleGoogleLoginSuccess}
             onError={handleGoogleLoginError}
