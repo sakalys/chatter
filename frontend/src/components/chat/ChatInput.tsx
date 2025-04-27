@@ -13,11 +13,11 @@ interface ChatInputProps {
 export function ChatInput({ 
   onSendMessage, 
   isLoading = false,
-  selectedModel = 'gpt-4',
+  selectedModel = 'gemini-2.5-flash-preview-04-17',
   onModelChange,
   configuredProviders = [],
 }: ChatInputProps) {
-  const [message, setMessage] = useState('Test message');
+  const [message, setMessage] = useState('Generate me 20 paragraphs of text');
 
   const availableModels = AVAILABLE_MODELS.filter(model => 
     configuredProviders.includes(model.provider)
@@ -33,7 +33,7 @@ export function ChatInput({
     e.preventDefault();
     if (message.trim() && !isLoading) {
       onSendMessage(message);
-      setMessage('');
+      setMessage('Generate me 20 paragraphs of text');
     }
   };
 

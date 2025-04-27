@@ -22,7 +22,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]); // New state for API keys
-  const [selectedModel, setSelectedModel] = useState<string>('gpt-4'); // Add selectedModel state
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-preview-04-17'); // Add selectedModel state
 
   // Get unique providers from API keys
   const configuredProviders = [...new Set(apiKeys.map(key => key.provider))];
