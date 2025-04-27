@@ -59,6 +59,30 @@ A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. U
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
 
+### Local KMS Setup
+
+The application uses AWS KMS for API key encryption. When running locally, we use LocalStack to emulate AWS KMS. The setup is automated and happens when you start the services with `docker compose up -d`. The KMS key and alias are automatically created and ready to use.
+
+> **Note**: The KMS verification scripts (`verify-kms.sh`, `01-init-kms.sh`, and `cleanup-kms.sh`) are designed to work only within the dockerized environment. They rely on the LocalStack container and its network configuration. Do not attempt to run these scripts outside of the Docker environment.
+
+To verify the KMS setup (within Docker):
+```bash
+./localstack/verify-kms.sh
+```
+
+If you need to manually initialize or reset the KMS setup (within Docker):
+1. Initialize KMS:
+   ```bash
+   ./localstack/01-init-kms.sh
+   ```
+
+2. Clean up KMS resources (if needed):
+   ```bash
+   ./localstack/cleanup-kms.sh
+   ```
+
+Note: The KMS setup is automatically initialized when LocalStack starts. You only need to run these scripts manually if you want to verify or troubleshoot the setup.
+
 ### Testing without Google Login
 
 For development and testing purposes, you can bypass the Google login process. This is useful for quickly accessing the main application interface without needing to go through the OAuth flow.

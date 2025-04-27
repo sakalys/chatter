@@ -66,17 +66,17 @@ services:
       - chat-network
 
   localstack:
-    image: localstack/localstack
+    build:
+      context: ./localstack
+      dockerfile: Dockerfile
     ports:
       - "4566:4566"
     environment:
       - SERVICES=kms
       - DEBUG=1
       - DOCKER_HOST=unix:///var/run/docker.sock
-      - INIT_SCRIPTS_PATH=/docker-entrypoint-initaws.d
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./localstack:/docker-entrypoint-initaws.d
     networks:
       - chat-network
 
