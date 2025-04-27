@@ -136,40 +136,91 @@ async def _generate_google_response(
             logger.info(f"Streaming POST request to Google API: {url}")
             # For streaming, we need to use the context manager directly
             async def stream_handler():
-                async with client.stream("POST", url, headers=headers, json=payload) as response:
-                    logger.info(f"Stream response status: {response.status_code}")
-                    if response.status_code != 200:
-                        # Read the error response content
-                        error_content = await response.aread()
+                max_retries = 3
+                retry_count = 0
+                timeout = httpx.Timeout(
+                    connect=10.0,  # 10 seconds to establish connection
+                    read=120.0,    # 120 seconds to read each chunk
+                    write=10.0,    # 10 seconds to write request
+                    pool=10.0      # 10 seconds to get connection from pool
+                )
+                
+                # Create a single client for all retries
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    while retry_count < max_retries:
                         try:
-                            error_data = json.loads(error_content)
-                            error_message = error_data.get('error', {}).get('message', 'Unknown error')
-                        except json.JSONDecodeError:
-                            error_message = f"Error: HTTP {response.status_code}"
-                        logger.error(f"Google API error: {error_message}")
-                        yield f"Error: {error_message}"
-                        return
-                        
-                    async for chunk in response.aiter_text():
-                        logger.info(f"Raw chunk: {chunk}")
-                        try:
-                            data = json.loads(chunk)
-                            logger.info(f"Parsed data: {data}")
-                            
-                            # Extract text from Google API response
-                            text = ""
-                            if "candidates" in data and data["candidates"]:
-                                candidate = data["candidates"][0]
-                                if "content" in candidate and "parts" in candidate["content"]:
-                                    for part in candidate["content"]["parts"]:
-                                        if "text" in part:
-                                            text += part["text"]
-                            
-                            if text:
-                                logger.info(f"Extracted text: {text}")
-                                yield text
+                            async with client.stream("POST", url, headers=headers, json=payload) as response:
+                                logger.info(f"Stream response status: {response.status_code}")
+                                if response.status_code != 200:
+                                    # Read the error response content
+                                    error_content = await response.aread()
+                                    try:
+                                        error_data = json.loads(error_content)
+                                        error_message = error_data.get('error', {}).get('message', 'Unknown error')
+                                    except json.JSONDecodeError:
+                                        error_message = f"Error: HTTP {response.status_code}"
+                                    logger.error(f"Google API error: {error_message}")
+                                    yield f"Error: {error_message}"
+                                    return
+                                
+                                # Process the stream with a more robust chunk handling
+                                buffer = ""
+                                async for chunk in response.aiter_text():
+                                    try:
+                                        # Add chunk to buffer and try to process complete JSON objects
+                                        buffer += chunk
+                                        while True:
+                                            try:
+                                                # Try to find a complete JSON object in the buffer
+                                                data = json.loads(buffer)
+                                                buffer = ""  # Clear buffer after successful parse
+                                                break
+                                            except json.JSONDecodeError:
+                                                # If we can't parse the buffer, wait for more data
+                                                if not chunk.endswith("}"):  # Only break if we're sure we need more data
+                                                    break
+                                                # If we have a complete chunk but can't parse it, log and continue
+                                                logger.warning(f"Could not parse complete chunk: {buffer}")
+                                                buffer = ""
+                                                break
+                                        
+                                        # Extract text from Google API response
+                                        text = ""
+                                        if "candidates" in data and data["candidates"]:
+                                            candidate = data["candidates"][0]
+                                            if "content" in candidate and "parts" in candidate["content"]:
+                                                for part in candidate["content"]["parts"]:
+                                                    if "text" in part:
+                                                        text += part["text"]
+                                        
+                                        if text:
+                                            logger.info(f"Extracted text chunk: {text[:100]}...")  # Log first 100 chars
+                                            yield text
+                                        
+                                    except json.JSONDecodeError as e:
+                                        logger.error(f"Error decoding JSON chunk: {e}")
+                                        continue
+                                    except Exception as e:
+                                        logger.error(f"Error processing chunk: {e}", exc_info=True)
+                                        continue
+                                
+                                # If we get here, the stream completed successfully
+                                return
+                                
+                        except httpx.ReadTimeout:
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                logger.warning(f"Stream timeout, retrying ({retry_count}/{max_retries})...")
+                                await asyncio.sleep(2)  # Increased delay between retries
+                                continue
+                            else:
+                                logger.error("Max retries reached for stream timeout")
+                                yield "Error: Stream timeout after multiple retries. The response may have been too large."
+                                return
                         except Exception as e:
-                            logger.error(f"Error processing chunk: {e}", exc_info=True)
+                            logger.error(f"Unexpected error in stream handler: {e}", exc_info=True)
+                            yield f"Error: {str(e)}"
+                            return
             
             # Return the stream handler
             return stream_handler
