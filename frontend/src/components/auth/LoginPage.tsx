@@ -5,6 +5,7 @@ import { GoogleLogin } from '@react-oauth/google';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const isDevelopment = import.meta.env.MODE === 'development';
 
   const handleGoogleLoginSuccess = async (credentialResponse: any) => {
     console.log('Google login successful:', credentialResponse);
@@ -47,6 +48,28 @@ const LoginPage: React.FC = () => {
     toast.error('Google login failed. Please try again.');
   };
 
+  const handleQuickLogin = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/test-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Test login failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('authToken', data.access_token);
+      navigate('/');
+    } catch (error) {
+      console.error('Test login failed:', error);
+      toast.error('Test login failed. Please try again.');
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black p-6">
       <div className="relative px-8 py-10 bg-gray-800 bg-opacity-70 backdrop-filter backdrop-blur-lg shadow-2xl rounded-xl w-full max-w-md border border-gray-700">
@@ -54,11 +77,19 @@ const LoginPage: React.FC = () => {
           <h1 className="text-5xl font-extrabold text-white mb-3 tracking-tight">Moo Point</h1>
           <h3 className="text-xl font-semibold text-gray-300">Login to your account</h3>
         </div>
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center space-y-4">
           <GoogleLogin
             onSuccess={handleGoogleLoginSuccess}
             onError={handleGoogleLoginError}
           />
+          {isDevelopment && (
+            <button
+              onClick={handleQuickLogin}
+              className="text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Quick test login (dev only)
+            </button>
+          )}
         </div>
       </div>
     </div>
