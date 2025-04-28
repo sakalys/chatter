@@ -1,12 +1,18 @@
 export type MessageRole = 'user' | 'assistant' | 'system';
 
-export interface Message {
+
+export interface Message extends MessageCreate {
   id: string;
+  created_at: string; // Add created_at property
+  timestamp: Date;
   role: MessageRole;
   content: string;
-  timestamp: Date;
-  model?: string;
-  created_at: string; // Add created_at property
+  model: string;
+}
+
+export interface MessageCreate {
+  content: string;
+  model: string;
 }
 
 export interface Conversation {

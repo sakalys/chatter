@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChatMessage } from './ChatMessage';
+import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import { Message, ApiKey } from '../../types'; // Import ApiKey type
-import { modelService } from '../../services/modelService';
+import { Message, ApiKey, MessageCreate } from '../../types'; // Import ApiKey type
 import { useLlm } from '../../context/LlmContext';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
+import { toast } from 'react-toastify';
 
 interface ChatInterfaceProps {
   setIsCreatingNewConversation: (isCreating: boolean) => void;
@@ -16,7 +16,9 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
   const navigate = useNavigate();
 
   const [conversationId, setConversationId] = useState<string | undefined>(routeConversationId);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<(Message)[]>([]);
+  const [outgoingMessage, setOutgoingMessage] = useState<MessageCreate | null>(null);
+  const [incomingMessage, setIncomingMessage] = useState<{message: string, model: string} | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { selectedLlm } = useLlm();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -119,15 +121,12 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
     }
 
     // Add user message
-    const userMessage: Message = {
-      id: `user-${Date.now()}-${messages.length}`, // More unique key
-      role: 'user',
+    const userMessage: MessageCreate = {
+      model: selectedModel,
       content,
-      timestamp: new Date(),
-      created_at: new Date().toISOString(),
     };
-
-    setMessages(prev => [...prev, userMessage]);
+    setOutgoingMessage(userMessage);
+    setIncomingMessage({message: '', model: selectedModel});
     setIsLoading(true);
 
     // If it's a new conversation, set the state in MainLayout to show the placeholder
@@ -150,30 +149,15 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
       const apiKey = apiKeys.find(key => key.provider === provider);
 
       if (!apiKey) {
-        console.error(`API key not found for provider: ${provider}`);
+        toast.error(`API key not found for provider: ${provider}`);
         setIsApiKeyModalOpen(true); // Prompt user to enter API key
         setIsLoading(false);
         return; // Stop processing if API key is missing
       }
 
-      console.log('Sending chat completion request with API Key ID:', apiKey.id); // Log API key ID
-
-      // Handle streaming response using EventSource
-      const assistantMessageId = `assistant-${Date.now()}-${messages.length + 1}`;
-      console.log('Generated assistant message ID:', assistantMessageId); // Log generated ID
-      const assistantMessage: Message = {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: '', // Start with empty content
-        timestamp: new Date(),
-        created_at: new Date().toISOString(),
-        model: selectedModel,
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-
       const authToken = localStorage.getItem('authToken'); // Get auth token
       if (!authToken) {
-        console.warn('Authentication token not found in local storage.');
+        toast.error('Authentication token not found in local storage.');
         setIsApiKeyModalOpen(true); // Prompt user to enter API key
         setIsLoading(false);
         setIsCreatingNewConversation(false);
@@ -181,6 +165,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
       }
 
       try {
+
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/generate`, {
           method: 'POST', // Use POST method
           headers: {
@@ -208,6 +193,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
 
         const decoder = new TextDecoder();
         let buffer = ''; // Buffer to handle incomplete SSE messages
+        let newConversationId = conversationId; // Keep track of the new conversation ID - Moved outside the loop
 
         while (true) {
           const { done, value } = await reader.read();
@@ -217,13 +203,13 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
           }
 
           buffer += decoder.decode(value, { stream: true });
+          console.log(buffer)
 
           // Process complete SSE messages in the buffer
           const events = buffer.split('\r\n');
           buffer = events.pop() || ''; // Keep the last potentially incomplete event in the buffer
 
           events.forEach(event => {
-            console.log('Processing SSE event:', event); // Log the raw event
             const lines = event.split('\n');
             let eventData = '';
             let eventType = '';
@@ -237,31 +223,35 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
               // Ignore other lines like 'id:' or comments
             });
 
+            // let newConversationId = conversationId; // Keep track of the new conversation ID - Moved outside the loop
+
             if (eventType === 'conversation_created' && eventData) {
-              console.log('Received conversation_created event with ID:', eventData);
-              // Update the URL to include the new conversation ID
-              navigate(`/chat/${eventData}`);
-              // Update the local state as well
-              setConversationId(eventData);
-              setIsCreatingNewConversation(false); // Hide placeholder once ID is received
+              // Store the new conversation ID, but don't navigate yet
+              newConversationId = eventData;
+              // setIsCreatingNewConversation(false); // Hide placeholder once ID is received - moved to 'done'
             } else if (eventType === 'message' && eventData) {
-              console.log('Extracted data:', eventData); // Log the extracted data
-              console.log('Assistant message ID:', assistantMessageId); // Log the assistant message ID
-              console.log('Messages state before update:', messages); // Log state before update
 
               // Assuming the data is the text chunk
               setMessages(prev => {
-                const updatedMessages = prev.map(msg =>
-                  msg.id === assistantMessageId ? { ...msg, content: msg.content + eventData } : msg // Append content
-                );
-                console.log('Messages state after update (append):', updatedMessages); // Log state after update
-                return updatedMessages;
+                // const updatedMessages = prev.map(msg =>
+                //   msg.id === assistantMessageId ? { ...msg, content: msg.content + eventData } : msg // Append content
+                // );
+                // return updatedMessages;
+                return prev;
               });
             } else if (eventType === 'done') {
-              console.log('Received done event');
               // The stream is finished, no more data for this message
               setIsLoading(false); // Stop loading when done
-              // setIsCreatingNewConversation(false); // This is now handled by conversation_created event
+
+              // Navigate and update state only after the stream is done
+              // Use newConversationId explicitly for navigation and state update
+              if (!conversationId && newConversationId) {
+                 navigate(`/chat/${newConversationId}`);
+                 setConversationId(newConversationId);
+                 setIsCreatingNewConversation(false); // Hide placeholder after navigation
+              } else {
+                 setIsCreatingNewConversation(false); // Hide placeholder if it was set for an existing conversation
+              }
             }
             // Handle other event types if needed
           });
@@ -272,7 +262,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
         // setIsCreatingNewConversation(false); // This is now handled by conversation_created event
 
       } catch (fetchError) { // Catch errors from the fetch and streaming process
-        console.error('Error during fetch or streaming:', fetchError);
+        toast.error('Error: ' + (fetchError instanceof Error ? fetchError.message : 'Unknown error'));
         // Re-throw the error to be caught by the outer catch block
         throw fetchError;
       }
@@ -287,6 +277,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
         content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date(),
         created_at: new Date().toISOString(),
+        model: selectedModel,
       };
 
       setMessages(prev => [...prev, errorMessage]);
@@ -304,6 +295,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
           <div>
           {messages.map((message) => (
             <ChatMessage
+              id={message.id}
               key={message.id}
               role={message.role}
               content={message.content}
@@ -311,6 +303,18 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
               model={message.model}
             />
           ))}
+          {outgoingMessage && (
+            <>
+              <OutgoingMessage
+                content={outgoingMessage.content}
+                model={outgoingMessage.model}
+              />
+              {incomingMessage !== null && <IncomingMessage
+                incomingMessage={incomingMessage.message}
+                model={incomingMessage.model}
+              />}
+            </>
+          )}
           </div>
       </div>
       <ChatInput
