@@ -35,6 +35,15 @@ export const apiFetch = async <T = unknown, TData = unknown>(method: Method, end
     return apiFetchWithToken<T, TData>(tokenStorage.token, method, endpoint, data, opts);
 };
 
+export const apiFetchStreaming = async <TData = unknown>(method: Method, endpoint: string, data: TData | null = null, opts: FetchOpts = {}): Promise<Response> => {
+    opts.headers = {
+        ...(opts.headers || {}),
+        'authorization': 'Bearer ' + tokenStorage.token,
+    };
+
+    return _apiFetchBase<TData>(method, endpoint, data, opts);
+};
+
 export const apiFetchWithToken = async <T = unknown, TData = unknown>(token: string, method: Method, endpoint: string, data: TData | null = null, opts: FetchOpts = {}): Promise<T> => {
 
     opts.headers = {
@@ -47,10 +56,41 @@ export const apiFetchWithToken = async <T = unknown, TData = unknown>(token: str
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-const _apiFetch = async <T = unknown, TData = unknown>(method: Method, endpoint: string, data: TData | null = null, {
+const _apiFetch = async <T = unknown, TData = unknown>(method: Method, endpoint: string, data: TData | null = null, opts: FetchOpts = {}): Promise<T> => {
+    let response;
+    try {
+        response = await _apiFetchBase<TData>(method, endpoint, data, opts);
+    } catch (e) {
+        throw new FetchError();
+    }
+
+    let json = null
+    try {
+        json = await response.json();
+    } catch (e) {
+        throw new ServerError({}, response);
+    }
+
+    if (response.ok) {
+        return json;
+    }
+
+    if (response.status >= 400 && response.status < 500) {
+        throw new ClientError(json, response);
+    }
+
+    if (response.status >= 500) {
+        throw new ServerError(json, response);
+    }
+
+    throw new UnrecognizedError(json);
+}
+
+
+const _apiFetchBase = async <TData = unknown>(method: Method, endpoint: string, data: TData | null = null, {
     headers = {},
     multipart = false,
-}: FetchOpts = {}): Promise<T> => {
+}: FetchOpts = {}): Promise<Response> => {
     endpoint = apiUrl + '/api/v1' + endpoint;
 
     const uri = new URL(endpoint);
@@ -88,34 +128,13 @@ const _apiFetch = async <T = unknown, TData = unknown>(method: Method, endpoint:
     }
 
 
-    let response;
     try {
-        response = await fetch(uri, init)
+        return await fetch(uri, init)
     } catch (e) {
         throw new FetchError();
     }
-
-    let json = null
-    try {
-        json = await response.json();
-    } catch (e) {
-        throw new ServerError({}, response);
-    }
-
-    if (response.ok) {
-        return json;
-    }
-
-    if (response.status >= 400 && response.status < 500) {
-        throw new ClientError(json, response);
-    }
-
-    if (response.status >= 500) {
-        throw new ServerError(json, response);
-    }
-
-    throw new UnrecognizedError(json);
 }
+
 
 export class HttpError extends Error {
     constructor(

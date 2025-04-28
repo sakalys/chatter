@@ -6,7 +6,7 @@ import { Message, ApiKey, MessageCreate } from '../../types'; // Import ApiKey t
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from '../../util/api';
+import { apiFetch, apiFetchStreaming } from '../../util/api';
 
 interface ChatInterfaceProps {
 }
@@ -24,7 +24,7 @@ const fetchApiKeys = async (): Promise<ApiKey[]> => {
 
 
 export function ChatInterface({ }: ChatInterfaceProps) {
-  const { conversationId: routeConversationId } = useParams<{ conversationId: string }>();
+  const { id: routeConversationId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [conversationId, setConversationId] = useState<string | undefined>(routeConversationId);
@@ -114,29 +114,13 @@ export function ChatInterface({ }: ChatInterfaceProps) {
         return; // Stop processing if API key is missing
       }
 
-      const authToken = localStorage.getItem('authToken'); // Get auth token
-      if (!authToken) {
-        toast.error('Authentication token not found in local storage.');
-        setIsApiKeyModalOpen(true); // Prompt user to enter API key
-        setIsLoading(false);
-        return;
-      }
-
       try {
-
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/generate`, {
-          method: 'POST', // Use POST method
-          headers: {
-            'Authorization': `Bearer ${authToken}`, // Include Authorization header
-            'Content-Type': 'application/json', // Set Content-Type for POST body
-          },
-          body: JSON.stringify({ // Include parameters in the request body
+        const response = await apiFetchStreaming('POST', '/chat/generate', {
             conversation_id: conversationId,
             model: selectedModel,
             message: content,
             api_key_id: apiKey.id,
             stream: true, // Request streaming
-          }),
         });
 
         if (!response.ok) {
