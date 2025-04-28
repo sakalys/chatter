@@ -294,14 +294,14 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       {/* Header with Conversation Title and LLM Selector */}
-      <div className="p-4 flex items-center justify-between border-b border-gray-200">
+      <div className="p-4 flex shrink-0 items-center justify-between border-b border-gray-200">
         <h2 className="text-xl font-bold text-gray-800">{conversationId ? `Conversation ${conversationId.substring(0, 8)}...` : 'New Conversation'}</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="pb-4">
+        <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
+          <div>
           {messages.map((message) => (
             <ChatMessage
               key={message.id}
@@ -311,20 +311,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
               model={message.model}
             />
           ))}
-          {isLoading && (
-            <ChatMessage
-              role="assistant"
-              content={
-                <div className="flex items-center">
-                  <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce"></div>
-                  <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce mx-1" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                </div>
-              }
-            />
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+          </div>
       </div>
       <ChatInput
         onSendMessage={handleSendMessage}

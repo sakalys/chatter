@@ -104,7 +104,7 @@ export function MainLayout({ children, authToken, setIsCreatingNewConversation }
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col h-full relative">
           {childrenWithProps} {/* Render children with injected prop */}
         </div>
       </LlmProvider>
