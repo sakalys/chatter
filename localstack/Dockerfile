@@ -4,6 +4,7 @@ FROM localstack/localstack
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
+    less \
     && rm -rf /var/lib/apt/lists/*
 
 # Install AWS CLI v2

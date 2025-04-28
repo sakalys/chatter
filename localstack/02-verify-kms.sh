@@ -10,7 +10,6 @@ export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
 export AWS_REGION=us-east-1
 export AWS_DEFAULT_REGION=us-east-1
-export ENDPOINT_URL="${LOCALSTACK_URL}"
 
 # Configure AWS CLI
 mkdir -p ~/.aws
@@ -18,6 +17,7 @@ cat > ~/.aws/config << EOL
 [default]
 region = us-east-1
 output = json
+endpoint_url = http://localhost:4566
 EOL
 
 cat > ~/.aws/credentials << EOL
@@ -37,36 +37,13 @@ fi
 echo "✓ LocalStack KMS service is running"
 
 # Check if alias exists
-if ! /usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms list-aliases --query "Aliases[?AliasName=='alias/chat-api-keys']" --output text 2>/dev/null | grep -q "alias/chat-api-keys"; then
-  echo "KMS alias 'alias/chat-api-keys' not found, creating new key..."
+if ! /usr/local/bin/aws kms list-aliases --query "Aliases[?AliasName=='alias/chat-api-keys']" --output text 2>/dev/null | grep -q "alias/chat-api-keys"; then
+  echo "KMS alias 'alias/chat-api-keys' not found..."
+  exit 1
   
-  # Create new KMS key
-  KEY_ID=$(/usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms create-key \
-    --description "Chat API Keys" \
-    --key-usage ENCRYPT_DECRYPT \
-    --origin AWS_KMS \
-    --query 'KeyMetadata.KeyId' \
-    --output text 2>/dev/null)
-
-  if [ -z "$KEY_ID" ]; then
-    echo "Error: Failed to create KMS key"
-    exit 1
-  fi
-
-  echo "Created KMS key with ID: $KEY_ID"
-
-  # Create alias for the key
-  if ! /usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms create-alias \
-    --alias-name alias/chat-api-keys \
-    --target-key-id "$KEY_ID" 2>/dev/null; then
-    echo "Error: Failed to create KMS alias"
-    exit 1
-  fi
-
-  echo "Created KMS alias 'alias/chat-api-keys'"
 else
   # Get the key ID from the alias
-  KEY_ID=$(/usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms describe-key --key-id alias/chat-api-keys --query 'KeyMetadata.KeyId' --output text 2>/dev/null)
+  KEY_ID=$(/usr/local/bin/aws kms describe-key --key-id alias/chat-api-keys --query 'KeyMetadata.KeyId' --output text 2>/dev/null)
 
   if [ -z "$KEY_ID" ]; then
     echo "Error: Could not retrieve key ID from alias"
@@ -88,7 +65,7 @@ ENCODED_DATA=$(echo -n "$TEST_DATA" | base64)
 MAX_RETRIES=3
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  ENCRYPTED=$(/usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms encrypt \
+  ENCRYPTED=$(/usr/local/bin/aws kms encrypt \
     --key-id alias/chat-api-keys \
     --plaintext "$ENCODED_DATA" \
     --query 'CiphertextBlob' \
@@ -113,7 +90,7 @@ fi
 # Try decryption with retries
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  DECRYPTED=$(/usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms decrypt \
+  DECRYPTED=$(/usr/local/bin/aws kms decrypt \
     --ciphertext-blob "$ENCRYPTED" \
     --query 'Plaintext' \
     --output text 2>/dev/null | base64 -d || echo "")

@@ -71,15 +71,9 @@ To verify the KMS setup (within Docker):
 ```
 
 If you need to manually initialize or reset the KMS setup (within Docker):
-1. Initialize KMS:
-   ```bash
-   ./localstack/01-init-kms.sh
-   ```
-
-2. Clean up KMS resources (if needed):
-   ```bash
-   ./localstack/cleanup-kms.sh
-   ```
+```bash
+docker compose exec localstack bash 01-init-kms.sh
+```
 
 Note: The KMS setup is automatically initialized when LocalStack starts. You only need to run these scripts manually if you want to verify or troubleshoot the setup.
 

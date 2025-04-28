@@ -18,7 +18,6 @@ export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
 export AWS_REGION=us-east-1
 export AWS_DEFAULT_REGION=us-east-1
-export ENDPOINT_URL="${LOCALSTACK_URL}"
 
 # Configure AWS CLI
 mkdir -p ~/.aws
@@ -26,6 +25,7 @@ cat > ~/.aws/config << EOL
 [default]
 region = us-east-1
 output = json
+endpoint_url = http://localhost:4566
 EOL
 
 cat > ~/.aws/credentials << EOL
@@ -38,13 +38,12 @@ EOL
 echo "Debug: AWS Configuration"
 echo "AWS_REGION=$AWS_REGION"
 echo "AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION"
-echo "ENDPOINT_URL=$ENDPOINT_URL"
 cat ~/.aws/config
 cat ~/.aws/credentials
 
 # Function to check if alias exists
 check_alias() {
-  /usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms list-aliases --query "Aliases[?AliasName=='alias/chat-api-keys']" --output text 2>/dev/null | grep -q "alias/chat-api-keys"
+  /usr/local/bin/aws kms list-aliases --query "Aliases[?AliasName=='alias/chat-api-keys']" --output text 2>/dev/null | grep -q "alias/chat-api-keys"
 }
 
 # If alias already exists, we're done
@@ -53,35 +52,28 @@ if check_alias; then
   exit 0
 fi
 
-# Create KMS key with retries
-MAX_RETRIES=5
-RETRY_COUNT=0
-
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   echo "Creating KMS key (attempt $((RETRY_COUNT + 1))/${MAX_RETRIES})..."
   
-  # Add debug output
-  echo "Debug: Running aws command with endpoint ${ENDPOINT_URL}"
-  /usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms list-keys 2>&1 || echo "List keys failed (expected during first run)"
-  
-  KEY_ID=$(/usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms create-key \
-    --description "Chat API Keys" \
-    --key-usage ENCRYPT_DECRYPT \
-    --origin AWS_KMS \
-    --query 'KeyMetadata.KeyId' \
-    --output text 2>/dev/null || echo "")
+# Add debug output
+/usr/local/bin/aws kms list-keys 2>&1 || echo "List keys failed (expected during first run)"
 
-  if [ -n "$KEY_ID" ]; then
-    echo "Created KMS key with ID: $KEY_ID"
-    break
-  fi
+KEY_ID=$(/usr/local/bin/aws kms create-key \
+  --description "Chat API Keys" \
+  --key-usage ENCRYPT_DECRYPT \
+  --origin AWS_KMS \
+  --query 'KeyMetadata.KeyId' \
+  --output text 2>/dev/null || echo "")
 
-  RETRY_COUNT=$((RETRY_COUNT + 1))
-  if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-    echo "Failed to create KMS key, retrying in 2 seconds..."
-    sleep 2
-  fi
-done
+if [ -n "$KEY_ID" ]; then
+  echo "Created KMS key with ID: $KEY_ID"
+  break
+fi
+
+RETRY_COUNT=$((RETRY_COUNT + 1))
+if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+  echo "Failed to create KMS key, retrying in 2 seconds..."
+  sleep 2
+fi
 
 if [ -z "$KEY_ID" ]; then
   echo "Failed to create KMS key after ${MAX_RETRIES} attempts"
@@ -89,22 +81,19 @@ if [ -z "$KEY_ID" ]; then
 fi
 
 # Create alias for the key with retries
-RETRY_COUNT=0
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  echo "Creating KMS key alias (attempt $((RETRY_COUNT + 1))/${MAX_RETRIES})..."
-  
-  if /usr/local/bin/aws --endpoint-url="${ENDPOINT_URL}" kms create-alias \
-    --alias-name alias/chat-api-keys \
-    --target-key-id "$KEY_ID" 2>/dev/null; then
-    break
-  fi
+echo "Creating KMS key alias (attempt $((RETRY_COUNT + 1))/${MAX_RETRIES})..."
 
-  RETRY_COUNT=$((RETRY_COUNT + 1))
-  if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-    echo "Failed to create alias, retrying in 2 seconds..."
-    sleep 2
-  fi
-done
+if /usr/local/bin/aws kms create-alias \
+  --alias-name alias/chat-api-keys \
+  --target-key-id "$KEY_ID" 2>/dev/null; then
+  break
+fi
+
+RETRY_COUNT=$((RETRY_COUNT + 1))
+if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+  echo "Failed to create alias, retrying in 2 seconds..."
+  sleep 2
+fi
 
 # Final verification
 if ! check_alias; then

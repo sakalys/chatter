@@ -8,16 +8,15 @@ from app.core.config import settings
 # Configure basic logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    # format='%(asctime)s - %(levelname)s - %(message)s',
     force=True  # This ensures our configuration takes precedence
 )
 
 
 logging.getLogger("uvicorn.error").level = logging.WARNING
 
-logger = logging.getLogger(__name__)
 
-logger.info("hi")
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.api_title,

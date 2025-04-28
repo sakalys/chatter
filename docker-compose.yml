@@ -74,9 +74,6 @@ services:
     environment:
       - SERVICES=kms
       - DEBUG=1
-      - DOCKER_HOST=unix:///var/run/docker.sock
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - chat-network
 
