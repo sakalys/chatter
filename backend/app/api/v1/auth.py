@@ -135,13 +135,8 @@ async def test_login(
             detail="Test mode is not enabled",
         )
 
-    test_user_email = "testuser@example.com"
+    test_user_email = "test@example.com"
     user = await get_user_by_email(db, test_user_email)
-
-    if not user:
-        # Create a test user if it doesn't exist
-        user_in = UserCreate(email=test_user_email, password=None, full_name="Test User")
-        user = await create_user(db, user_in)
 
     # Create access token for the test user
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)

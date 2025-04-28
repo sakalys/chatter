@@ -26,8 +26,11 @@ async def get_api_keys_by_user(
     Returns:
         List of API key objects
     """
+    logger.info(f"Getting API keys for user {user_id}")
     result = await db.execute(select(ApiKey).where(ApiKey.user_id == user_id))
-    return result.scalars().all()
+    api_keys = result.scalars().all()
+    logger.info(f"Found {len(api_keys)} API keys: {api_keys}")
+    return api_keys
 
 
 async def get_api_key_by_id(
