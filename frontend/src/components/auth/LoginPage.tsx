@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleLogin } from '@react-oauth/google';
 import { useMutation } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
 
 const googleLogin = async (credential: string): Promise<{ access_token: string }> => {
   const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/google-login`, {
@@ -38,6 +39,7 @@ const quickLogin = async (): Promise<{ access_token: string }> => {
 
 
 const LoginPage: React.FC = () => {
+  const auth = useAuth();
   const navigate = useNavigate();
   const isDevelopment = import.meta.env.MODE === 'development';
 
@@ -59,7 +61,7 @@ const LoginPage: React.FC = () => {
   const quickLoginMutation = useMutation<{ access_token: string }, Error>({
     mutationFn: quickLogin,
     onSuccess: (data) => {
-      localStorage.setItem('authToken', data.access_token);
+      auth.login(data.access_token);
       navigate('/');
     },
     onError: (error) => {

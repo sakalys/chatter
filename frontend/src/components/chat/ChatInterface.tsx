@@ -1,29 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { Message, ApiKey, MessageCreate } from '../../types'; // Import ApiKey type
-import { useLlm } from '../../context/LlmContext';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
 
 interface ChatInterfaceProps {
-  setIsCreatingNewConversation: (isCreating: boolean) => void;
 }
 
 const fetchMessages = async (conversationId: string | undefined): Promise<Message[]> => {
   if (!conversationId) {
-    return [
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: 'Hello! How can I help you today?',
-        timestamp: new Date(),
-        created_at: new Date().toISOString(),
-        model: 'GPT-4' // Default model if selectedLlm is not available
-      }
-    ];
+    return [];
   }
   const authToken = localStorage.getItem('authToken');
   if (!authToken) {
@@ -59,7 +49,7 @@ const fetchApiKeys = async (): Promise<ApiKey[]> => {
 };
 
 
-export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfaceProps) {
+export function ChatInterface({ }: ChatInterfaceProps) {
   const { conversationId: routeConversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
 
@@ -68,8 +58,6 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
   const [outgoingMessage, setOutgoingMessage] = useState<MessageCreate | null>(null);
   const [incomingMessage, setIncomingMessage] = useState<{message: string, model: string} | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { selectedLlm } = useLlm();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-preview-04-17'); // Add selectedModel state
 
@@ -96,29 +84,11 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
     }
   }, [fetchedMessages]);
 
-  // Handle messages fetching error
-  useEffect(() => {
-    if (messagesError) {
-      console.error('Error fetching messages:', messagesError);
-      // Optionally, show an error message to the user
-    }
-  }, [messagesError]);
-
-  // Handle API keys fetching error
-  useEffect(() => {
-    if (apiKeysError) {
-      console.error('Error fetching API keys:', apiKeysError);
-      // Optionally, display an error message to the user
-    }
-  }, [apiKeysError]);
-
-
   // Get unique providers from API keys
   const configuredProviders = [...new Set(apiKeys?.map(key => key.provider) || [])];
 
   // Handle model change
   const handleModelChange = (modelId: string) => {
-    console.log('Model changed to:', modelId);
     setSelectedModel(modelId);
   };
 
@@ -126,11 +96,6 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
   useEffect(() => {
     setConversationId(routeConversationId);
   }, [routeConversationId]);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   const handleSendMessage = async (content: string) => {
     // Prevent sending message if API keys are not loaded
@@ -151,7 +116,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
 
     // If it's a new conversation, set the state in MainLayout to show the placeholder
     if (!conversationId) {
-      setIsCreatingNewConversation(true);
+      // setIsCreatingNewConversation(true);
     }
 
     try {
@@ -180,7 +145,6 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
         toast.error('Authentication token not found in local storage.');
         setIsApiKeyModalOpen(true); // Prompt user to enter API key
         setIsLoading(false);
-        setIsCreatingNewConversation(false);
         return;
       }
 
@@ -268,9 +232,9 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
               if (!conversationId && newConversationId) {
                  navigate(`/chat/${newConversationId}`);
                  setConversationId(newConversationId);
-                 setIsCreatingNewConversation(false); // Hide placeholder after navigation
+                //  setIsCreatingNewConversation(false); // Hide placeholder after navigation
               } else {
-                 setIsCreatingNewConversation(false); // Hide placeholder if it was set for an existing conversation
+                //  setIsCreatingNewConversation(false); // Hide placeholder if it was set for an existing conversation
               }
             }
             // Handle other event types if needed
@@ -290,7 +254,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
       // Handle error for both streaming and non-streaming
       console.error('Error sending message:', error);
       setIsLoading(false); // Stop loading on error
-      setIsCreatingNewConversation(false); // Hide placeholder on error
+      // setIsCreatingNewConversation(false); // Hide placeholder on error
       const errorMessage: Message = {
         id: `system-${Date.now()}-${messages.length + 1}`, // More unique key for errors
         role: 'system',

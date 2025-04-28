@@ -1,40 +1,23 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 import { LlmProvider } from '../../context/LlmContext';
 import { SettingsButton } from '../ui/SettingsButton';
 import { Conversation } from '../../types';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../../util/api';
 
-interface MainLayoutProps {
-  children: ReactNode;
-  authToken: string | null; // Add authToken prop
-  setIsCreatingNewConversation: (isCreating: boolean) => void; // Add setIsCreatingNewConversation prop
-}
-
-const fetchConversations = async (authToken: string | null): Promise<Conversation[]> => {
-  if (!authToken) {
-    return [];
-  }
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/conversations/`, {
-    headers: {
-      'Authorization': `Bearer ${authToken}`,
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Error fetching conversations: ${response.statusText}`);
-  }
-  return response.json();
+const fetchConversations = async (): Promise<Conversation[]> => {
+  return apiFetch<Conversation[]>('GET', '/conversations');
 };
 
-export function MainLayout({ children, authToken, setIsCreatingNewConversation }: MainLayoutProps) {
+export function MainLayout({ children }: PropsWithChildren) {
   const [isCreatingNewConversationState, setIsCreatingNewConversationState] = useState(false); // Re-add state
   const location = useLocation();
 
   // Fetch conversations using React Query
   const { data: conversations, error, isLoading } = useQuery<Conversation[], Error>({
-    queryKey: ['conversations', authToken],
-    queryFn: () => fetchConversations(authToken),
-    enabled: !!authToken, // Only fetch if authToken exists
+    queryKey: ['conversations'],
+    queryFn: () => fetchConversations(),
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
 
@@ -43,14 +26,6 @@ export function MainLayout({ children, authToken, setIsCreatingNewConversation }
       setIsCreatingNewConversationState(false); // Use local state
     }
   }, [location.pathname]);
-
-  // Pass setIsCreatingNewConversationState down to children
-  const childrenWithProps = React.Children.map(children, child => {
-    if (React.isValidElement(child)) {
-      return React.cloneElement(child, { setIsCreatingNewConversation: setIsCreatingNewConversationState } as any);
-    }
-    return child;
-  });
 
 
   return (
@@ -94,7 +69,7 @@ export function MainLayout({ children, authToken, setIsCreatingNewConversation }
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col h-full relative">
-          {childrenWithProps} {/* Render children with injected prop */}
+          {children} {/* Render children with injected prop */}
         </div>
       </LlmProvider>
     </div>

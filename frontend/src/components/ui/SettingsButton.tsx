@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ApiKeyManagerModal } from './ApiKeyManagerModal';
 import { McpConfigModal } from './McpConfigModal';
 import { useMutation } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
 
 interface McpConfig {
   id: string;
@@ -25,10 +26,14 @@ export function SettingsButton() {
   const [isMcpConfigModalOpen, setIsMcpConfigModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [mcpConfigs, setMcpConfigs] = useState<McpConfig[]>([]);
+  const auth = useAuth();
 
   // Use useMutation for logout
   const logoutMutation = useMutation<void, Error>({
-    mutationFn: logoutUser,
+    mutationFn: async () => {
+     await logoutUser();
+      auth.logout();
+    },
     onSuccess: () => {
       // Clear the token from local storage
       localStorage.removeItem('authToken'); // Use 'authToken' as used in App.tsx
