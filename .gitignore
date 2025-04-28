@@ -103,3 +103,4 @@ yarn-error.log*
 # Local development
 .localstack/
 backend/.ruff_cache/
+backend/fixtures/google_api_key.txt

@@ -29,7 +29,7 @@ class Settings(BaseModel):
     access_token_expire_minutes: int = Field(default=30)
     
     # Database
-    database_url: str = Field(default="postgresql://chatuser:chatpassword@db:5432/chatdb")
+    database_url: str = Field(default="postgresql+asyncpg://chatuser:chatpassword@db:5432/chatdb")
     
     # Redis
     redis_url: str = Field(default="redis://redis:6379/0")
