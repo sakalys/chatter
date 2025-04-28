@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { Message, ApiKey, MessageCreate } from '../../types'; // Import ApiKey type
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../../util/api';
 
 interface ChatInterfaceProps {
 }
@@ -15,37 +15,11 @@ const fetchMessages = async (conversationId: string | undefined): Promise<Messag
   if (!conversationId) {
     return [];
   }
-  const authToken = localStorage.getItem('authToken');
-  if (!authToken) {
-    console.warn('Authentication token not found in local storage.');
-    throw new Error('Authentication token not found.');
-  }
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/conversations/${conversationId}/messages`, {
-    headers: {
-      'Authorization': `Bearer ${authToken}`,
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Error fetching messages: ${response.statusText}`);
-  }
-  return response.json();
+  return apiFetch<Message[]>('GET', `/conversations/${conversationId}/messages`);
 };
 
 const fetchApiKeys = async (): Promise<ApiKey[]> => {
-  const authToken = localStorage.getItem('authToken');
-  if (!authToken) {
-    console.warn('Authentication token not found in local storage.');
-    throw new Error('Authentication token not found.');
-  }
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/api-keys/`, {
-    headers: {
-      'Authorization': `Bearer ${authToken}`,
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Error fetching API keys: ${response.statusText}`);
-  }
-  return response.json();
+  return apiFetch<ApiKey[]>('GET', '/api-keys/');
 };
 
 
