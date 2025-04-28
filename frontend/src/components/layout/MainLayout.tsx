@@ -87,7 +87,9 @@ export function MainLayout({ children, authToken, setIsCreatingNewConversation }
                 <Link
                   key={conversation.id}
                   to={`/chat/${conversation.id}`}
-                  className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-100"
+                  className={`block w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
+                    location.pathname === `/chat/${conversation.id}` ? 'bg-blue-50 text-blue-600' : ''
+                  }`}
                 >
                   <div className="font-medium truncate">{conversation.title || `Conversation ${conversation.id.substring(0, 8)}...`}</div>
                 </Link>
@@ -95,7 +97,7 @@ export function MainLayout({ children, authToken, setIsCreatingNewConversation }
             </div>
           </div>
           <div className="p-4 border-t border-gray-200">
-            <Link to="/chat" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-center">
+            <Link to="/" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-center">
               New Chat
             </Link>
           </div>

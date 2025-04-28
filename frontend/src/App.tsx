@@ -83,17 +83,30 @@ function App() {
       <Routes>
         {bypassAuth ? (
           authToken ? ( // Conditionally render if authToken exists
-            <Route
-              path="/"
-              element={
-                <MainLayout
-                  authToken={authToken}
-                  setIsCreatingNewConversation={setIsCreatingNewConversation}
-                >
-                  <ChatInterface setIsCreatingNewConversation={setIsCreatingNewConversation} />
-                </MainLayout>
-              }
-            />
+            <>
+              <Route
+                path="/"
+                element={
+                  <MainLayout
+                    authToken={authToken}
+                    setIsCreatingNewConversation={setIsCreatingNewConversation}
+                  >
+                    <ChatInterface setIsCreatingNewConversation={setIsCreatingNewConversation} />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/chat/:conversationId"
+                element={
+                  <MainLayout
+                    authToken={authToken}
+                    setIsCreatingNewConversation={setIsCreatingNewConversation}
+                  >
+                    <ChatInterface setIsCreatingNewConversation={setIsCreatingNewConversation} />
+                  </MainLayout>
+                }
+              />
+            </>
           ) : (
             // Optionally render an error message or redirect if test login fails
             <Route path="/" element={<div>Error obtaining test token.</div>} />
@@ -103,6 +116,21 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route
               path="/"
+              element={
+                authToken ? ( // Conditionally render if authToken exists
+                  <MainLayout
+                    authToken={authToken}
+                    setIsCreatingNewConversation={setIsCreatingNewConversation}
+                  >
+                    <ChatInterface setIsCreatingNewConversation={setIsCreatingNewConversation} />
+                  </MainLayout>
+                ) : (
+                  <LoginPage /> // Redirect to login if no token
+                )
+              }
+            />
+            <Route
+              path="/chat/:conversationId"
               element={
                 authToken ? ( // Conditionally render if authToken exists
                   <MainLayout

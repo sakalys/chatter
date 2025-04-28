@@ -33,6 +33,11 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
     setSelectedModel(modelId);
   };
 
+  // Update conversationId when route parameter changes
+  useEffect(() => {
+    setConversationId(routeConversationId);
+  }, [routeConversationId]);
+
   // Fetch messages if conversationId is in the URL and fetch API keys
   useEffect(() => {
     const fetchData = async () => {
@@ -258,9 +263,13 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
         setIsLoading(false);
         setIsCreatingNewConversation(false);
 
-        // TODO: Refine new conversation ID handling with streaming.
-        // If it was a new conversation, the backend should ideally return the new conversation ID in an initial SSE event or the 'done' event.
-        // For now, we'll assume the conversationId state is updated elsewhere if it's a new conversation.
+        // If this was a new conversation and we received a conversation ID in the response
+        // Update the URL to include the conversation ID
+        if (!conversationId) {
+          // Check if we have a conversation ID in the response
+          // This would require the backend to return the conversation ID in the response
+          // For now, we'll assume the conversationId state is updated elsewhere if it's a new conversation
+        }
 
       } catch (fetchError) { // Catch errors from the fetch and streaming process
         console.error('Error during fetch or streaming:', fetchError);

@@ -1,17 +1,17 @@
-import { ReactNode } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
 interface ChatMessageProps {
   role: MessageRole;
-  content: string | ReactNode;
+  content: string;
   timestamp?: Date;
   model?: string;
 }
 
 export function ChatMessage({ role, content, timestamp, model }: ChatMessageProps) {
   const isUser = role === 'user';
-  
   return (
     <div className={`py-5 ${isUser ? 'bg-white' : 'bg-gray-50'}`}>
       <div className="max-w-4xl mx-auto px-4">
@@ -39,12 +39,12 @@ export function ChatMessage({ role, content, timestamp, model }: ChatMessageProp
                 </span>
               )}
             </div>
-            <div className="mt-1 text-sm text-gray-700 prose max-w-none">
-              {typeof content === 'string' ? (
-                <p>{content}</p>
-              ) : (
-                content
-              )}
+            <div className="mt-1 text-sm text-gray-700">
+              <div className="prose prose-sm">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {content}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         </div>

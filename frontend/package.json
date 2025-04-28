@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.12.1",
+    "@tailwindcss/typography": "^0.5.16",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.5.2",
-    "react-toastify": "^11.0.5"
+    "react-toastify": "^11.0.5",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

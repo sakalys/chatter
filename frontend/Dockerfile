@@ -1,8 +1,5 @@
 FROM node:20-slim
 
-# Create a non-root user
-RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
-
 WORKDIR /app
 
 # Copy package files
@@ -14,11 +11,8 @@ RUN npm install
 # Copy the rest of the application
 COPY . .
 
-# Set proper permissions
-RUN chown -R nodejs:nodejs /app
-
 # Switch to non-root user
-USER nodejs
+USER 1000:1000
 
 # Expose the port
 EXPOSE 5173

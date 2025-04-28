@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @import 'react-toastify/dist/ReactToastify.css';
+
+@plugin '@tailwindcss/typography';
+@config '../tailwind.config.js';
 
 /* Custom styles can be added below */

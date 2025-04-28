@@ -1,15 +1,15 @@
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MessageBase(BaseModel):
     """Base message schema."""
-    role: str  # "user", "assistant", "system", etc.
-    content: str
-    model: str | None = None  # The model used for this message (if assistant)
-    metadata: dict[str, Any] | None = None  # Additional metadata
+    role: str = Field(..., description="Message role: 'user', 'assistant', or 'system'")
+    content: str = Field(..., description="Message content in markdown format")
+    model: str | None = Field(None, description="The model used for this message (if assistant)")
+    meta: dict[str, Any] | None = Field(None, description="Additional metadata")
 
 
 class MessageCreate(MessageBase):

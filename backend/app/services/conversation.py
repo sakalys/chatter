@@ -157,7 +157,7 @@ async def add_message_to_conversation(
         role=message_in.role,
         content=message_in.content,
         model=message_in.model,
-        metadata=message_in.metadata,
+        meta=message_in.meta,
     )
     db.add(message)
     await db.commit()
