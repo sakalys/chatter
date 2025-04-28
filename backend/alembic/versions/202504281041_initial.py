@@ -1,8 +1,8 @@
-"""initial migration
+"""initial
 
-Revision ID: 545c5659fc3f
+Revision ID: 9b0cc316e256
 Revises: 
-Create Date: 2025-04-26 14:26:10.745425
+Create Date: 2025-04-28 10:41:31.990231
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '545c5659fc3f'
+revision: str = '9b0cc316e256'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -42,6 +42,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_api_keys_id'), 'api_keys', ['id'], unique=False)
+    op.create_index(op.f('ix_api_keys_user_id'), 'api_keys', ['user_id'], unique=False)
     op.create_table('conversations',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -82,6 +83,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_mcp_configs_id'), table_name='mcp_configs')
     op.drop_table('mcp_configs')
     op.drop_table('conversations')
+    op.drop_index(op.f('ix_api_keys_user_id'), table_name='api_keys')
     op.drop_index(op.f('ix_api_keys_id'), table_name='api_keys')
     op.drop_table('api_keys')
     op.drop_index(op.f('ix_users_id'), table_name='users')

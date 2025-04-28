@@ -433,8 +433,11 @@ async def handle_chat_request(
         Response from the LLM provider or SSE response, including the conversation ID
     """
     logger.info(f"Handling chat request for user: {user_id}, conversation: {conversation_id}, stream: {stream}") # Log handling request
+    
+    is_new_conversation = conversation_id is None
+
     # If no conversation_id is provided, create a new conversation
-    if conversation_id is None:
+    if is_new_conversation:
         from app.services.conversation import create_conversation
         conversation = await create_conversation(db, ConversationCreate(), user_id)
         conversation_id = conversation.id
@@ -491,11 +494,26 @@ async def handle_chat_request(
         )
         logger.info(f"Finished generate_chat_response. Response type: {type(response)}") # Log after calling generation and response type
 
-        if stream and api_key.provider == "google":
-            logger.info(f"Returning streaming response for Google. Response type: {type(response)}") # Log returning stream and response type
-            # Return streaming response for Google
-            # The response is already a context manager, so we can use it directly
-            return EventSourceResponse(process_chat_stream(response, conversation_id, model, api_key.provider, db))
+        if stream:
+            logger.info(f"Returning streaming response. Response type: {type(response)}") # Log returning stream and response type
+            
+            async def event_generator():
+                # If it's a new conversation, send an initial event with the conversation ID
+                if is_new_conversation:
+                    logger.info(f"Sending initial conversation_id event: {conversation_id}")
+                    yield {
+                        "event": "conversation_created",
+                        "data": str(conversation_id)
+                    }
+                    # Add a small delay to ensure the event is sent before the stream starts
+                    await asyncio.sleep(0.01) 
+
+                # Process the main chat stream
+                async for event_data in process_chat_stream(response, conversation_id, model, api_key.provider, db):
+                    yield event_data
+
+            return EventSourceResponse(event_generator())
+
         else:
             logger.info(f"Handling non-streaming response. Response type: {type(response)}") # Log handling non-stream and response type
             # Handle non-streaming response (for OpenAI and potentially others)

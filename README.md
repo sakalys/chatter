@@ -1,8 +1,6 @@
 # Chat Platform
 
-[![CI](https://github.com/yourusername/chat-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/chat-platform/actions/workflows/ci.yml)
-
-A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. Users can select their preferred models and use their own API keys. The platform also supports MCP (Model Context Protocol) calls via user-specified URLs.
+A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. Users can select their preferred LLM provider and models and use their own API keys. The platform also supports MCP (Model Context Protocol) calls via user-specified URLs.
 
 ## Features
 
@@ -33,7 +31,7 @@ A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. U
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/chat-platform.git
+   git clone https://github.com/sakalys/chat-platform.git
    cd chat-platform
    ```
 

@@ -9,8 +9,12 @@ docker compose up -d db
 echo "Waiting for database to be ready..."
 docker compose exec db sh -c 'until pg_isready; do sleep 1; done'
 
+docker compose up -d backend
+
 # Run migrations
 echo "Running database migrations..."
 docker compose exec backend uv run alembic upgrade head
+
+docker compose exec backend uv run python -m fixtures.create_fixtures
 
 echo "Database initialization complete!"
