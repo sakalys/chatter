@@ -2,44 +2,79 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleLogin } from '@react-oauth/google';
+import { useMutation } from '@tanstack/react-query';
+
+const googleLogin = async (credential: string): Promise<{ access_token: string }> => {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/google-login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token: credential }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Google login failed');
+  }
+
+  return response.json();
+};
+
+const quickLogin = async (): Promise<{ access_token: string }> => {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/test-login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Test login failed');
+  }
+
+  return response.json();
+};
+
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const isDevelopment = import.meta.env.MODE === 'development';
 
-  const handleGoogleLoginSuccess = async (credentialResponse: any) => {
-    console.log('Google login successful:', credentialResponse);
-    // TODO: Send credentialResponse.credential (ID token) to backend for verification
-    // and token exchange. For now, simulate success and redirect.
-
-    try {
-      // Call backend endpoint to verify token and authenticate user
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/google-login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: credentialResponse.credential }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.detail || 'Google login failed';
-        console.error('Google login failed:', response.statusText, errorData);
-        toast.error(errorMessage);
-        return;
-      }
-
-      const data = await response.json();
+  // Use useMutation for Google login
+  const googleLoginMutation = useMutation<{ access_token: string }, Error, string>({
+    mutationFn: googleLogin,
+    onSuccess: (data) => {
       console.log('Backend authentication successful:', data);
-      // Store authentication token (example using localStorage)
       localStorage.setItem('authToken', data.access_token);
-      // Redirect user to the main page
       navigate('/');
-
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('An error occurred during backend authentication:', error);
-      toast.error('An error occurred during login.');
+      toast.error('An error occurred during login: ' + error.message);
+    },
+  });
+
+  // Use useMutation for quick test login
+  const quickLoginMutation = useMutation<{ access_token: string }, Error>({
+    mutationFn: quickLogin,
+    onSuccess: (data) => {
+      localStorage.setItem('authToken', data.access_token);
+      navigate('/');
+    },
+    onError: (error) => {
+      console.error('Test login failed:', error);
+      toast.error('Test login failed: ' + error.message);
+    },
+  });
+
+
+  const handleGoogleLoginSuccess = (credentialResponse: any) => {
+    console.log('Google login successful:', credentialResponse);
+    if (credentialResponse.credential) {
+      googleLoginMutation.mutate(credentialResponse.credential);
+    } else {
+      toast.error('Google login failed: No credential received.');
     }
   };
 
@@ -48,27 +83,12 @@ const LoginPage: React.FC = () => {
     toast.error('Google login failed. Please try again.');
   };
 
-  const handleQuickLogin = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/test-login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Test login failed');
-      }
-
-      const data = await response.json();
-      localStorage.setItem('authToken', data.access_token);
-      navigate('/');
-    } catch (error) {
-      console.error('Test login failed:', error);
-      toast.error('Test login failed. Please try again.');
-    }
+  const handleQuickLoginClick = () => {
+    quickLoginMutation.mutate();
   };
+
+  const isLoading = googleLoginMutation.isPending || quickLoginMutation.isPending;
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black p-6">
@@ -84,10 +104,11 @@ const LoginPage: React.FC = () => {
           />
           {isDevelopment && (
             <button
-              onClick={handleQuickLogin}
-              className="text-sm text-gray-400 hover:text-white transition-colors"
+              onClick={handleQuickLoginClick}
+              className="text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading}
             >
-              Quick test login (dev only)
+              {quickLoginMutation.isPending ? 'Logging in...' : 'Quick test login (dev only)'}
             </button>
           )}
         </div>

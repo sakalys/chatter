@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ApiKeyManagerModal } from './ApiKeyManagerModal';
 import { McpConfigModal } from './McpConfigModal';
+import { useMutation } from '@tanstack/react-query';
 
 interface McpConfig {
   id: string;
@@ -8,36 +9,50 @@ interface McpConfig {
   url: string;
 }
 
+const logoutUser = async () => {
+  // Call the backend logout endpoint
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/logout`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new Error('Logout failed');
+  }
+};
+
 export function SettingsButton() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isMcpConfigModalOpen, setIsMcpConfigModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [mcpConfigs, setMcpConfigs] = useState<McpConfig[]>([]);
-  
+
+  // Use useMutation for logout
+  const logoutMutation = useMutation<void, Error>({
+    mutationFn: logoutUser,
+    onSuccess: () => {
+      // Clear the token from local storage
+      localStorage.removeItem('authToken'); // Use 'authToken' as used in App.tsx
+
+      // Redirect to the login page
+      window.location.href = '/login';
+    },
+    onError: (error) => {
+      console.error('Logout failed:', error);
+      // Optionally, display an error message to the user
+    },
+  });
+
   const handleMcpConfigSave = (configs: McpConfig[]) => {
     setMcpConfigs(configs);
     // In a real app, you would save these to localStorage or a backend
     localStorage.setItem('mcpConfigs', JSON.stringify(configs));
   };
 
-  const handleLogout = async () => {
-    try {
-      // Call the backend logout endpoint
-      await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/logout`, {
-        method: 'POST',
-      });
-
-      // Clear the token from local storage
-      localStorage.removeItem('access_token');
-
-      // Redirect to the login page
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Optionally, display an error message to the user
-    }
+  const handleLogoutClick = () => {
+    logoutMutation.mutate();
+    setIsDropdownOpen(false);
   };
-  
+
   return (
     <div className="relative">
       <button
@@ -50,7 +65,7 @@ export function SettingsButton() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       </button>
-      
+
       {isDropdownOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
           <button
@@ -73,21 +88,19 @@ export function SettingsButton() {
           </button>
           <button
             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            onClick={() => {
-              handleLogout();
-              setIsDropdownOpen(false);
-            }}
+            onClick={handleLogoutClick}
+            disabled={logoutMutation.isPending}
           >
-            Logout
+            {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
           </button>
         </div>
       )}
-      
+
       <ApiKeyManagerModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
       />
-      
+
       <McpConfigModal
         isOpen={isMcpConfigModalOpen}
         onClose={() => setIsMcpConfigModalOpen(false)}

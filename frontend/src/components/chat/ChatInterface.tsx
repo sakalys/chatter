@@ -6,10 +6,58 @@ import { Message, ApiKey, MessageCreate } from '../../types'; // Import ApiKey t
 import { useLlm } from '../../context/LlmContext';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import { toast } from 'react-toastify';
+import { useQuery } from '@tanstack/react-query';
 
 interface ChatInterfaceProps {
   setIsCreatingNewConversation: (isCreating: boolean) => void;
 }
+
+const fetchMessages = async (conversationId: string | undefined): Promise<Message[]> => {
+  if (!conversationId) {
+    return [
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: 'Hello! How can I help you today?',
+        timestamp: new Date(),
+        created_at: new Date().toISOString(),
+        model: 'GPT-4' // Default model if selectedLlm is not available
+      }
+    ];
+  }
+  const authToken = localStorage.getItem('authToken');
+  if (!authToken) {
+    console.warn('Authentication token not found in local storage.');
+    throw new Error('Authentication token not found.');
+  }
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/conversations/${conversationId}/messages`, {
+    headers: {
+      'Authorization': `Bearer ${authToken}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Error fetching messages: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+const fetchApiKeys = async (): Promise<ApiKey[]> => {
+  const authToken = localStorage.getItem('authToken');
+  if (!authToken) {
+    console.warn('Authentication token not found in local storage.');
+    throw new Error('Authentication token not found.');
+  }
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/api-keys/`, {
+    headers: {
+      'Authorization': `Bearer ${authToken}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Error fetching API keys: ${response.statusText}`);
+  }
+  return response.json();
+};
+
 
 export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfaceProps) {
   const { conversationId: routeConversationId } = useParams<{ conversationId: string }>();
@@ -23,11 +71,50 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
   const { selectedLlm } = useLlm();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]); // New state for API keys
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-preview-04-17'); // Add selectedModel state
 
+  // Fetch messages using React Query
+  const { data: fetchedMessages, error: messagesError, isLoading: isLoadingMessages } = useQuery<Message[], Error>({
+    queryKey: ['messages', conversationId],
+    queryFn: () => fetchMessages(conversationId),
+    enabled: true, // Always enabled, fetchMessages handles the conversationId logic
+    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
+  });
+
+  // Fetch API keys using React Query
+  const { data: apiKeys, error: apiKeysError, isLoading: isLoadingApiKeys } = useQuery<ApiKey[], Error>({
+    queryKey: ['apiKeys'],
+    queryFn: fetchApiKeys,
+    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
+  });
+
+
+  // Update messages state when fetchedMessages changes
+  useEffect(() => {
+    if (fetchedMessages) {
+      setMessages(fetchedMessages);
+    }
+  }, [fetchedMessages]);
+
+  // Handle messages fetching error
+  useEffect(() => {
+    if (messagesError) {
+      console.error('Error fetching messages:', messagesError);
+      // Optionally, show an error message to the user
+    }
+  }, [messagesError]);
+
+  // Handle API keys fetching error
+  useEffect(() => {
+    if (apiKeysError) {
+      console.error('Error fetching API keys:', apiKeysError);
+      // Optionally, display an error message to the user
+    }
+  }, [apiKeysError]);
+
+
   // Get unique providers from API keys
-  const configuredProviders = [...new Set(apiKeys.map(key => key.provider))];
+  const configuredProviders = [...new Set(apiKeys?.map(key => key.provider) || [])];
 
   // Handle model change
   const handleModelChange = (modelId: string) => {
@@ -40,73 +127,6 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
     setConversationId(routeConversationId);
   }, [routeConversationId]);
 
-  // Fetch messages if conversationId is in the URL and fetch API keys
-  useEffect(() => {
-    const fetchData = async () => {
-      // Fetch messages
-      if (conversationId) {
-        try {
-          const authToken = localStorage.getItem('authToken');
-          if (!authToken) {
-            console.warn('Authentication token not found in local storage.');
-            // Depending on the application flow, you might want to redirect to login here
-            return; // Stop fetching if no token
-          }
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/conversations/${conversationId}/messages`, {
-            headers: {
-              'Authorization': `Bearer ${authToken}`, // Include auth token
-            },
-          });
-          if (!response.ok) {
-            throw new Error(`Error fetching messages: ${response.statusText}`);
-          }
-          const data: Message[] = await response.json();
-          setMessages(data);
-        } catch (error) {
-          console.error('Error fetching messages:', error);
-          // Handle error, maybe show an error message to the user
-        }
-      } else {
-        // Start with a welcome message for a new conversation
-        setMessages([
-          {
-            id: 'welcome',
-            role: 'assistant',
-            content: 'Hello! How can I help you today?',
-            timestamp: new Date(),
-            created_at: new Date().toISOString(),
-            model: selectedLlm?.id || 'GPT-4'
-          }
-        ]);
-      }
-
-      // Fetch API keys
-      try {
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) {
-          console.warn('Authentication token not found in local storage.');
-          // Depending on the application flow, you might want to redirect to login here
-          return; // Stop fetching if no token
-        }
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/api-keys/`, {
-          headers: {
-            'Authorization': `Bearer ${authToken}`, // Include auth token
-          },
-        });
-        if (!response.ok) {
-          throw new Error(`Error fetching API keys: ${response.statusText}`);
-        }
-        const keys: ApiKey[] = await response.json();
-        setApiKeys(keys);
-      } catch (error) {
-        console.error('Error fetching API keys:', error);
-        // Optionally, display an error message to the user
-      }
-    };
-
-    fetchData();
-  }, [conversationId, selectedLlm?.id]);
-
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -114,7 +134,7 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
 
   const handleSendMessage = async (content: string) => {
     // Prevent sending message if API keys are not loaded
-    if (apiKeys.length === 0) {
+    if (!apiKeys || apiKeys.length === 0) {
       console.warn('API keys not loaded yet. Cannot send message.');
       // Optionally, show a user-facing message
       return;
@@ -319,8 +339,8 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
       </div>
       <ChatInput
         onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-        apiKeysLoaded={apiKeys.length > 0}
+        isLoading={isLoading || isLoadingMessages || isLoadingApiKeys}
+        apiKeysLoaded={apiKeys !== undefined && apiKeys.length > 0}
         configuredProviders={configuredProviders}
         selectedModel={selectedModel}
         onModelChange={handleModelChange}

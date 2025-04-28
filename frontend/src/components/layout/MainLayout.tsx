@@ -3,6 +3,7 @@ import { LlmProvider } from '../../context/LlmContext';
 import { SettingsButton } from '../ui/SettingsButton';
 import { Conversation } from '../../types';
 import { Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -10,44 +11,32 @@ interface MainLayoutProps {
   setIsCreatingNewConversation: (isCreating: boolean) => void; // Add setIsCreatingNewConversation prop
 }
 
+const fetchConversations = async (authToken: string | null): Promise<Conversation[]> => {
+  if (!authToken) {
+    return [];
+  }
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/conversations/`, {
+    headers: {
+      'Authorization': `Bearer ${authToken}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Error fetching conversations: ${response.statusText}`);
+  }
+  return response.json();
+};
+
 export function MainLayout({ children, authToken, setIsCreatingNewConversation }: MainLayoutProps) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isCreatingNewConversationState, setIsCreatingNewConversationState] = useState(false); // Re-add state
   const location = useLocation();
 
-  useEffect(() => {
-    const fetchConversations = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/conversations/`, {
-          headers: {
-            'Authorization': `Bearer ${authToken}`, // Use authToken prop
-          },
-        });
-        if (!response.ok) {
-          throw new Error(`Error fetching conversations: ${response.statusText}`);
-        }
-        const data: Conversation[] = await response.json();
-        setConversations(data);
-        setError(null);
-      } catch (err: any) {
-        setError(err.message);
-        setConversations([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (authToken) { // Only fetch if token exists
-      fetchConversations();
-    } else {
-      setLoading(false);
-      setConversations([]);
-      setError(null);
-    }
-  }, [authToken]); // Depend on authToken prop
+  // Fetch conversations using React Query
+  const { data: conversations, error, isLoading } = useQuery<Conversation[], Error>({
+    queryKey: ['conversations', authToken],
+    queryFn: () => fetchConversations(authToken),
+    enabled: !!authToken, // Only fetch if authToken exists
+    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
+  });
 
   useEffect(() => {
     if (location.pathname === '/chat' || location.pathname === '/') {
@@ -81,9 +70,9 @@ export function MainLayout({ children, authToken, setIsCreatingNewConversation }
                   <div className="font-medium truncate text-gray-500">Creating new conversation...</div>
                 </div>
               )}
-              {loading && <div className="text-gray-500">Loading conversations...</div>}
-              {error && <div className="text-red-500">Error: {error}</div>}
-              {!loading && !error && conversations.map((conversation) => (
+              {isLoading && <div className="text-gray-500">Loading conversations...</div>}
+              {error && <div className="text-red-500">Error: {error.message}</div>}
+              {!isLoading && !error && conversations?.map((conversation) => (
                 <Link
                   key={conversation.id}
                   to={`/chat/${conversation.id}`}
