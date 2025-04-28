@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Nl2p } from './ChatInterface';
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
@@ -42,9 +43,13 @@ export function ChatMessage({ role, content, timestamp, model }: ChatMessageProp
             </div>
             <div className="mt-1 text-sm text-gray-700">
               <div className="prose prose-sm">
+                {isUser ? (
+                  <Nl2p text={content} />
+                ): (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {content}
                 </ReactMarkdown>
+                )}
               </div>
             </div>
           </div>
@@ -72,9 +77,15 @@ export function IncomingMessage({incomingMessage, model}: {incomingMessage: stri
             </div>
             <div className="mt-1 text-sm text-gray-700">
               <div className="prose prose-sm">
+                {incomingMessage === '' ? (
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                ) : (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {incomingMessage}
                 </ReactMarkdown>
+                )}
               </div>
             </div>
           </div>
@@ -84,14 +95,10 @@ export function IncomingMessage({incomingMessage, model}: {incomingMessage: stri
   );
 }
 
-
-type OutgoingMessageProps = {
+export function OutgoingMessage ({ content }: {
   content: string;
   model: string;
-};
-
-
-export function OutgoingMessage ({ content, model }: OutgoingMessageProps) {
+}) {
   return (
     <div className="py-5 bg-white">
       <div className="max-w-4xl mx-auto px-4">
@@ -103,7 +110,7 @@ export function OutgoingMessage ({ content, model }: OutgoingMessageProps) {
           </div>
           <div className="ml-3 flex-1">
             <div className="flex items-center">
-              <p className="text-sm font-medium text-gray-900">{model || 'Assistant'}</p>
+              <p className="text-sm font-medium text-gray-900">You</p>
             </div>
             <div className="mt-1 text-sm text-gray-700">
               <div className="prose prose-sm">

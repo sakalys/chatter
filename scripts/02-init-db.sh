@@ -15,6 +15,8 @@ docker compose up -d backend
 echo "Running database migrations..."
 docker compose exec backend uv run alembic upgrade head
 
+# Run fixtures
+echo "Creating fixtures..."
 docker compose exec backend uv run python -m fixtures.create_fixtures
 
 echo "Database initialization complete!"

@@ -304,17 +304,17 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
             />
           ))}
           {outgoingMessage && (
-            <>
-              <OutgoingMessage
-                content={outgoingMessage.content}
-                model={outgoingMessage.model}
-              />
-              {incomingMessage !== null && <IncomingMessage
+            <OutgoingMessage
+              content={outgoingMessage.content}
+              model={outgoingMessage.model}
+            />
+          )}
+            {incomingMessage !== null && (
+              <IncomingMessage
                 incomingMessage={incomingMessage.message}
                 model={incomingMessage.model}
-              />}
-            </>
-          )}
+              />
+            )}
           </div>
       </div>
       <ChatInput
@@ -330,6 +330,17 @@ export function ChatInterface({ setIsCreatingNewConversation }: ChatInterfacePro
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
       />
+    </div>
+  );
+}
+
+export function Nl2p ({ text }: { text: string }) {
+  return (
+    <div className="prose prose-sm">
+      {/* make paragraphs out of text */}
+      {text.split('\n').map((line, index) => (
+        <p key={index} className="mb-2">{line}</p>
+      ))}
     </div>
   );
 }
