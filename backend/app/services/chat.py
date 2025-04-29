@@ -38,9 +38,6 @@ async def _generate_google_response(
     Returns:
         Response from the Google API
     """
-    headers = {
-        "Content-Type": "application/json",
-    }
     
     # Format messages for Google's API
     formatted_messages = []

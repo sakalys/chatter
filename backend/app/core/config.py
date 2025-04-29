@@ -58,6 +58,3 @@ class Settings(BaseModel):
 
 # Create settings instance
 settings = Settings()
-
-print(f"Settings initialized - test_mode_enabled: {settings.test_mode_enabled}")
-print(f"AWS KMS Key ID: {settings.aws_kms_key_id}")

@@ -1,4 +1,3 @@
-import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -15,7 +14,6 @@ from app.services.api_key import (
     update_api_key,
 )
 
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -28,9 +26,8 @@ async def read_api_keys(
     """
     Get all API keys for the current user.
     """
-    logger.info(f"Fetching API keys for user {current_user.id}")
     api_keys = await get_api_keys_by_user(db, current_user.id)
-    logger.info(f"Found {len(api_keys)} API keys: {api_keys}")
+
     return api_keys
 
 

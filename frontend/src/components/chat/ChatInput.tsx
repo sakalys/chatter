@@ -12,6 +12,7 @@ interface ChatInputProps {
 // const defaultMsg = 'hi';
 // const defaultMsg = 'print me 20 paragraphs of random text';
 const defaultMsg = '';
+// const defaultMsg = "what's the weather like in Klaipeda?";
 
 export function ChatInput({ 
   onSendMessage, 

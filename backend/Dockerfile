@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -8,17 +8,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir alembic
+RUN pip install --no-cache-dir uv
 
 # Copy application code
 COPY . .
 
-# Create a non-root user
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-USER appuser
+USER 1000:1000
 
 # Start the application
 CMD ["uv", "run", "fastapi", "dev", "--host", "0.0.0.0", "--port", "8000"]
