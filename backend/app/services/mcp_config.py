@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.mcp_config import MCPConfig
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
 
+from mcp import ClientSession
+from mcp.client.sse import sse_client
 
 async def get_mcp_configs_by_user(
     db: AsyncSession, user_id: UUID
@@ -48,7 +50,9 @@ async def get_mcp_config_by_id(
 
 
 async def create_mcp_config(
-    db: AsyncSession, mcp_config_in: MCPConfigCreate, user_id: UUID
+    db: AsyncSession,
+    mcp_config_in: MCPConfigCreate, 
+    user_id: UUID,
 ) -> MCPConfig:
     """
     Create a new MCP configuration.
@@ -67,9 +71,13 @@ async def create_mcp_config(
         url=mcp_config_in.url,
         configuration=mcp_config_in.configuration,
     )
+
+    await update_tools(mcp_config)
+
     db.add(mcp_config)
     await db.commit()
     await db.refresh(mcp_config)
+
     return mcp_config
 
 
@@ -91,10 +99,28 @@ async def update_mcp_config(
     
     for field, value in update_data.items():
         setattr(mcp_config, field, value)
+
+    await update_tools(mcp_config)
     
     await db.commit()
     await db.refresh(mcp_config)
     return mcp_config
+
+async def update_tools(mcp_config: MCPConfig) -> None:
+    """
+    Update the tools for an MCP configuration.
+    
+    Args:
+        mcp_config: MCP configuration object
+    """
+    async with sse_client(mcp_config.url) as streams:
+        async with ClientSession(*streams) as session:
+            await session.initialize()
+
+            result = await session.list_tools()
+
+            for tool in result.tools:
+                print(tool)
 
 
 async def delete_mcp_config(
