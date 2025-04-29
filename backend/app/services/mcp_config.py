@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.mcp_config import MCPConfig
+from app.models.mcp_config import MCPConfig, Tool
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
 
 from mcp import ClientSession
@@ -72,7 +72,7 @@ async def create_mcp_config(
         configuration=mcp_config_in.configuration,
     )
 
-    await update_tools(mcp_config)
+    await update_tools(db, mcp_config)
 
     db.add(mcp_config)
     await db.commit()
@@ -100,17 +100,18 @@ async def update_mcp_config(
     for field, value in update_data.items():
         setattr(mcp_config, field, value)
 
-    await update_tools(mcp_config)
-    
+    await update_tools(db, mcp_config)
+
     await db.commit()
     await db.refresh(mcp_config)
     return mcp_config
 
-async def update_tools(mcp_config: MCPConfig) -> None:
+async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> None:
     """
     Update the tools for an MCP configuration.
     
     Args:
+        db: Database session
         mcp_config: MCP configuration object
     """
     async with sse_client(mcp_config.url) as streams:
@@ -119,8 +120,20 @@ async def update_tools(mcp_config: MCPConfig) -> None:
 
             result = await session.list_tools()
 
-            for tool in result.tools:
-                print(tool)
+            # Delete existing tools
+            await db.execute(delete(Tool).where(Tool.mcp_config_id == mcp_config.id))
+
+            # Add new tools
+            for tool_data in result.tools:
+                tool = Tool(
+                    mcp_config_id=mcp_config.id,
+                    name=tool_data.name,
+                    description=tool_data.description,
+                    inputSchema=tool_data.inputSchema,
+                )
+                db.add(tool)
+
+            await db.commit()
 
 
 async def delete_mcp_config(
