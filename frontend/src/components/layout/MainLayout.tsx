@@ -1,6 +1,6 @@
-import { PropsWithChildren, useEffect } from 'react';
+import { PropsWithChildren, useState } from 'react';
 import { LlmProvider } from '../../context/LlmContext';
-import { NewConversationProvider, useNewConversation } from '../../context/NewConversationContext';
+import { NewChatState, NewConversationContext } from '../../context/NewConversationContext';
 import { SettingsButton } from '../ui/SettingsButton';
 import { Conversation } from '../../types';
 import { Link, useLocation } from 'react-router-dom';
@@ -13,17 +13,17 @@ const fetchConversations = async (): Promise<Conversation[]> => {
 
 export function MainLayout({ children }: PropsWithChildren) {
   const location = useLocation();
-  const { newChatState } = useNewConversation(); // Consume context and setter
 
   // Fetch conversations using React Query
-  const { data: conversations, error, isLoading } = useQuery<Conversation[], Error>({
+  const { data: conversations, error, isLoading, refetch } = useQuery<Conversation[], Error>({
     queryKey: ['conversations'],
     queryFn: () => fetchConversations(),
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
-
+  const [newChatState, setNewChatState] = useState<NewChatState>("no");
 
   return (
+    <NewConversationContext.Provider value={{ newChatState, setNewChatState, refetchConversations: refetch }}>
     <div className="flex h-screen bg-gray-100">
       <LlmProvider>
           {/* Sidebar */}
@@ -73,5 +73,6 @@ export function MainLayout({ children }: PropsWithChildren) {
           </div>
       </LlmProvider>
     </div>
+    </NewConversationContext.Provider >
   );
 }

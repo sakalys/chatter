@@ -49,18 +49,15 @@ async def cleanup_database(db: AsyncSession) -> None:
 async def create_test_user(db: AsyncSession) -> User:
     """Create a test user if it doesn't exist."""
     test_user_email = "test@example.com"
-    user = await get_user_by_email(db, test_user_email)
     
-    if not user:
-        user_in = UserCreate(
-            email=test_user_email,
-            password="testpassword",
-            full_name="Test User",
-        )
-        user = await create_user(db, user_in)
-        print(f"Created test user: {user.email}")
-    else:
-        print(f"Test user already exists: {user.email}")
+    user_in = UserCreate(
+        id='9d9b8ccf-4c09-48bf-adf0-ded3423650a4',
+        email=test_user_email,
+        password="testpassword",
+        full_name="Test User",
+    )
+    user = await create_user(db, user_in)
+    print(f"Created test user: {user.email}")
     
     return user
 

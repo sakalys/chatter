@@ -243,11 +243,6 @@ async def handle_chat_request(
                 conversation_id
             )
 
-            yield {
-                "event": "done",
-                "data": ""
-            }
-
             # Generate and set conversation title after the first response
             if is_new_conversation and content:
                 generated_title = await generate_and_set_conversation_title(
@@ -265,6 +260,11 @@ async def handle_chat_request(
                         "event": "conversation_title_updated",
                         "data": generated_title
                     }
+
+            yield {
+                "event": "done",
+                "data": ""
+            }
 
         return EventSourceResponse(event_generator())
 
@@ -314,6 +314,8 @@ async def generate_and_set_conversation_title(
             conversation = await get_conversation_by_id(db, conversation_id) # User ID is not needed for internal update
             if conversation:
                 await update_conversation(db, conversation, ConversationUpdate(title=title))
+            else:
+                logger.error(f"Conversation not found for ID: {conversation_id}")
 
     except Exception as e:
         logger.error(f"Error generating or setting conversation title: {e}", exc_info=True)

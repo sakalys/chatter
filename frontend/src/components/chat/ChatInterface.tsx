@@ -37,7 +37,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [conversationTitle, setConversationTitle] = useState<string>('New Conversation');
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-preview-04-17');
-  const { newChatState, setNewChatState } = useNewConversation(); // Consume context and setter
+  const { setNewChatState, refetchConversations } = useNewConversation(); // Consume context and setter
 
   // Fetch messages using React Query
   const { data: fetchedMessages, error: messagesError, isLoading: isLoadingMessages } = useQuery<Message[], Error>({
@@ -206,7 +206,8 @@ export function ChatInterface({ }: ChatInterfaceProps) {
                 setConversationId(newConversationId);
                 setIncomingMessage(null)
                 setOutgoingMessage(null)
-                setNewChatState("no"); // Set state to "no" after navigation
+                setNewChatState("no");
+                refetchConversations(); // Refetch conversations after new chat is created and done
               }
             } else if (eventType === 'conversation_title_updated' && typeof eventData === 'string') {
               // Update the conversation title state

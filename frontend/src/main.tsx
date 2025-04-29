@@ -85,11 +85,9 @@ const router = createBrowserRouter([
                   {
                       path: '/chat',
                       element: (
-                        <NewConversationProvider> {/* Wrap with NewConversationProvider */}
                           <MainLayout>
                             <ChatInterface />
                           </MainLayout>
-                        </NewConversationProvider>
                       ),
                       children: [
                           {
