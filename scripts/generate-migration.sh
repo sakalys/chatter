@@ -14,7 +14,7 @@ docker compose up -d backend
 
 # Generate a new migration
 echo "Generating new migration: $1"
-docker compose exec backend alembic revision --autogenerate -m "$1"
+docker compose exec backend uv run alembic revision --autogenerate -m "$1"
 
 echo "Migration generated successfully!"
 echo "You can now apply the migration with: ./scripts/init-db.sh"

@@ -9,8 +9,8 @@ class Settings(BaseModel):
     model_config = ConfigDict(env_file=None, extra='ignore')
     
     # API settings
-    api_title: str = "Chat Platform API"
-    api_description: str = "API for a model-agnostic chat platform"
+    api_title: str = "Moo Point API"
+    api_description: str = "API for a model-agnostic chat platform with tool use using MCP"
     api_version: str = "0.1.0"
     
     # Environment

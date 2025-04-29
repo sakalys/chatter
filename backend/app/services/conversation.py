@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -23,7 +23,11 @@ async def get_conversations_by_user(
     Returns:
         List of conversation objects
     """
-    result = await db.execute(select(Conversation).where(Conversation.user_id == user_id))
+    result = await db.execute(
+        select(Conversation)
+        .where(Conversation.user_id == user_id)
+        .order_by(Conversation.created_at.desc())
+    )
     return result.scalars().all()
 
 

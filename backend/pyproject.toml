@@ -1,7 +1,7 @@
 [project]
 name = "chat-platform-backend"
 version = "0.1.0"
-description = "Backend for a model-agnostic chat platform"
+description = "API for a model-agnostic chat platform with tool use using MCP"
 requires-python = ">=3.11"
 
 dependencies = [

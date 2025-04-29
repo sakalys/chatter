@@ -38,10 +38,8 @@ app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
-    logger.info("Root endpoint accessed")
-    return {"message": "Welcome to the Chat Platform API"}
+    return {"message": "Welcome to the Moo Point API"}
 
 @app.get("/health")
 async def health_check():
-    logger.info("Health check endpoint accessed")
     return {"status": "healthy"}

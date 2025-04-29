@@ -10,7 +10,8 @@ interface ChatInputProps {
   configuredProviders?: string[];
 }
 // const defaultMsg = 'hi';
-const defaultMsg = 'print me 20 paragraphs of random text';
+// const defaultMsg = 'print me 20 paragraphs of random text';
+const defaultMsg = '';
 
 export function ChatInput({ 
   onSendMessage, 
