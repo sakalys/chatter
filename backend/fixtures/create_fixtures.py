@@ -132,6 +132,37 @@ async def create_google_api_key(db: AsyncSession, user: User) -> None:
     await create_api_key(db, api_key_in, user.id)
     print("Created Google API key for test user")
 
+async def create_example_conversation(db: AsyncSession, user: User) -> None:
+    """Create an example conversation with messages for the test user."""
+    print("Creating example conversation...")
+    
+    # Create a new conversation
+    conversation = Conversation(user_id=user.id, title="Example Conversation")
+    db.add(conversation)
+    await db.commit()
+    await db.refresh(conversation)
+    print(f"Created conversation: {conversation.title}")
+    
+    # Create example messages
+    messages_data = [
+        {"content": "Hello! How can I help you today?", "role": "assistant"},
+        {"content": "Hi there! I'd like to know more about creating fixtures.", "role": "user"},
+        {"content": "Fixtures are used to populate a database with test data. In this project, we use SQLAlchemy.", "role": "assistant"},
+        {"content": "That's helpful. How do I run the fixture script?", "role": "user"},
+        {"content": "You can run the `create_fixtures.py` script directly using Python.", "role": "assistant"},
+    ]
+    
+    for msg_data in messages_data:
+        message = Message(
+            conversation_id=conversation.id,
+            content=msg_data["content"],
+            role=msg_data["role"],
+        )
+        db.add(message)
+    
+    await db.commit()
+    print(f"Added {len(messages_data)} messages to the conversation.")
+
 async def main():
     """Main function to create all fixtures."""
     # Create database engine
@@ -154,6 +185,9 @@ async def main():
 
         # Create OpenAI API key
         await create_openai_api_key(db, user)
+        
+        # Create example conversation
+        await create_example_conversation(db, user)
     
     print("Fixtures creation completed!")
 
