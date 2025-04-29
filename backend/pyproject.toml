@@ -21,6 +21,8 @@ dependencies = [
     "bcrypt>=4.3.0",
     "google-auth>=2.39.0",
     "requests>=2.32.3",
+    "google>=3.0.0",
+    "google-genai>=1.12.1",
 ]
 
 [project.optional-dependencies]

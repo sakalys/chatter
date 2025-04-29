@@ -1,8 +1,10 @@
+from datetime import datetime
 import logging # Import logging
 import json
-from typing import Any
+from typing import Any, AsyncGenerator
 from uuid import UUID
 import asyncio
+from google import genai
 
 import httpx
 from fastapi import HTTPException, status
@@ -15,76 +17,13 @@ from app.schemas.message import MessageCreate
 from app.services.api_key import decrypt_api_key
 from app.services.conversation import add_message_to_conversation
 
-# Define the LLM provider API endpoints
-OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
-GOOGLE_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-
 logger = logging.getLogger(__name__) # Get logger
-
-async def _generate_openai_response(
-    messages: list[dict[str, str]],
-    model: str,
-    api_key: str,
-    stream: bool = False,
-) -> dict[str, Any]:
-    """
-    Generate a chat response from the OpenAI API.
-
-    Args:
-        messages: List of messages in the conversation
-        model: Model to use for generation
-        api_key: Decrypted OpenAI API key
-        stream: Whether to stream the response
-
-    Returns:
-        Response from the OpenAI API
-    """
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
-    }
-    payload = {
-        "model": model,
-        "messages": messages,
-        "stream": stream,
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(OPENAI_API_URL, headers=headers, json=payload)
-
-    response.raise_for_status()  # Raise an exception for bad status codes
-    return response.json()
-
-
-async def _generate_anthropic_response(
-    messages: list[dict[str, str]],
-    model: str,
-    api_key: str,
-    stream: bool = False,
-) -> dict[str, Any]:
-    """
-    Generate a chat response from the Anthropic API.
-
-    Args:
-        messages: List of messages in the conversation
-        model: Model to use for generation
-        api_key: Decrypted Anthropic API key
-        stream: Whether to stream the response
-
-    Returns:
-        Response from the Anthropic API
-    """
-    # TODO: Implement Anthropic API call
-    raise NotImplementedError("Anthropic API integration not yet implemented")
-
 
 async def _generate_google_response(
     messages: list[dict[str, str]],
     model: str,
     api_key: str,
-    stream: bool = False,
-) -> dict[str, Any]:
+) -> AsyncGenerator[str, None]:
     """
     Generate a chat response from the Google API.
 
@@ -115,124 +54,17 @@ async def _generate_google_response(
         else:
             logger.warning(f"Message missing 'content' key: {msg}")
 
-    payload = {
-        "contents": formatted_messages,
-        "generationConfig": {
-            "temperature": 0.7,
-            "topK": 40,
-            "topP": 0.95,
-            "maxOutputTokens": 1024,
-        },
-    }
+    client = genai.Client(api_key=api_key)
 
-    # Use the API key directly since it's already decrypted
-    url = f"{GOOGLE_API_URL}/{model}:generateContent?key={api_key}"
-    logger.info(f"Using API key: {api_key[:5]}...") # Log first 5 chars of API key for debugging
-    
-    # Create a new client for each request
-    client = httpx.AsyncClient()
-    try:
-        if stream:
-            logger.info(f"Streaming POST request to Google API: {url}")
-            # For streaming, we need to use the context manager directly
-            async def stream_handler():
-                max_retries = 3
-                retry_count = 0
-                timeout = httpx.Timeout(
-                    connect=10.0,  # 10 seconds to establish connection
-                    read=120.0,    # 120 seconds to read each chunk
-                    write=10.0,    # 10 seconds to write request
-                    pool=10.0      # 10 seconds to get connection from pool
-                )
-                
-                # Create a single client for all retries
-                async with httpx.AsyncClient(timeout=timeout) as client:
-                    while retry_count < max_retries:
-                        try:
-                            async with client.stream("POST", url, headers=headers, json=payload) as response:
-                                logger.info(f"Stream response status: {response.status_code}")
-                                if response.status_code != 200:
-                                    # Read the error response content
-                                    error_content = await response.aread()
-                                    try:
-                                        error_data = json.loads(error_content)
-                                        error_message = error_data.get('error', {}).get('message', 'Unknown error')
-                                    except json.JSONDecodeError:
-                                        error_message = f"Error: HTTP {response.status_code}"
-                                    logger.error(f"Google API error: {error_message}")
-                                    yield f"Error: {error_message}"
-                                    return
-                                
-                                # Process the stream with a more robust chunk handling
-                                buffer = ""
-                                async for chunk in response.aiter_text():
-                                    try:
-                                        # Add chunk to buffer and try to process complete JSON objects
-                                        buffer += chunk
-                                        while True:
-                                            try:
-                                                # Try to find a complete JSON object in the buffer
-                                                data = json.loads(buffer)
-                                                buffer = ""  # Clear buffer after successful parse
-                                                break
-                                            except json.JSONDecodeError:
-                                                # If we can't parse the buffer, wait for more data
-                                                if not chunk.endswith("}"):  # Only break if we're sure we need more data
-                                                    break
-                                                # If we have a complete chunk but can't parse it, log and continue
-                                                logger.warning(f"Could not parse complete chunk: {buffer}")
-                                                buffer = ""
-                                                break
-                                        
-                                        # Extract text from Google API response
-                                        text = ""
-                                        if "candidates" in data and data["candidates"]:
-                                            candidate = data["candidates"][0]
-                                            if "content" in candidate and "parts" in candidate["content"]:
-                                                for part in candidate["content"]["parts"]:
-                                                    if "text" in part:
-                                                        text += part["text"]
-                                        
-                                        if text:
-                                            logger.info(f"Extracted text chunk: {text[:100]}...")  # Log first 100 chars
-                                            yield text
-                                        
-                                    except json.JSONDecodeError as e:
-                                        logger.error(f"Error decoding JSON chunk: {e}")
-                                        continue
-                                    except Exception as e:
-                                        logger.error(f"Error processing chunk: {e}", exc_info=True)
-                                        continue
-                                
-                                # If we get here, the stream completed successfully
-                                return
-                                
-                        except httpx.ReadTimeout:
-                            retry_count += 1
-                            if retry_count < max_retries:
-                                logger.warning(f"Stream timeout, retrying ({retry_count}/{max_retries})...")
-                                await asyncio.sleep(2)  # Increased delay between retries
-                                continue
-                            else:
-                                logger.error("Max retries reached for stream timeout")
-                                yield "Error: Stream timeout after multiple retries. The response may have been too large."
-                                return
-                        except Exception as e:
-                            logger.error(f"Unexpected error in stream handler: {e}", exc_info=True)
-                            yield f"Error: {str(e)}"
-                            return
-            
-            # Return the stream handler
-            return stream_handler
-        else:
-            logger.info(f"Non-streaming POST request to Google API: {url}")
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            return response.json()
-    finally:
-        # Only close the client if we're not streaming
-        if not stream:
-            await client.aclose()
+    times = []
+    async for chunk in await client.aio.models.generate_content_stream(
+        # model="gemini-2.0-flash-001",
+        model=model,
+        contents=formatted_messages,
+    ):
+        yield chunk.text
+
+    return
 
 
 async def generate_chat_response(
@@ -242,7 +74,7 @@ async def generate_chat_response(
     api_key: str,  # Changed to expect decrypted key string
     provider: str,  # Added provider parameter
     stream: bool = False,
-) -> Any: # Changed return type to Any to accommodate both dict and httpx.Response
+) -> AsyncGenerator[str, None]:
     """
     Generate a chat response from an LLM provider.
     
@@ -259,26 +91,11 @@ async def generate_chat_response(
     """
     logger.info(f"Generating chat response for model: {model}, stream: {stream}") # Log generation request
     
-    # Determine which provider to use
-    if provider == "openai":
-        logger.info("Using OpenAI provider") # Log provider
-        return await _generate_openai_response(
-            messages, model, api_key, stream
-        )
-    if provider == "anthropic":
-        logger.info("Using Anthropic provider") # Log provider
-        return await _generate_anthropic_response(
-            messages, model, api_key, stream
-        )
     if provider == "google":
-        logger.info("Using Google provider") # Log provider
-        logger.info(f"Calling _generate_google_response with stream={stream}") # Log before calling google generation
-        response = await _generate_google_response(
-            messages, model, api_key, stream
-        )
-        logger.info(f"_generate_google_response returned type: {type(response)}") # Log type after calling google generation
+        response = _generate_google_response( messages, model, api_key)
+
         return response
-    # If the provider is not supported, raise an error
+
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=f"Unsupported LLM provider: {provider}",
@@ -386,17 +203,6 @@ async def process_chat_stream(
     # After the stream is done, save the complete message to the database
     if content:
         logger.info("Stream finished, saving message to database")
-        from app.services.conversation import add_message_to_conversation
-        await add_message_to_conversation(
-            db,
-            MessageCreate(
-                role="assistant",
-                content=content,
-                model=model,
-                metadata={"provider": provider}
-            ),
-            conversation_id
-        )
 
     # End event
     logger.info("Sending done event")
@@ -493,67 +299,46 @@ async def handle_chat_request(
             stream=stream
         )
         logger.info(f"Finished generate_chat_response. Response type: {type(response)}") # Log after calling generation and response type
-
-        if stream:
-            logger.info(f"Returning streaming response. Response type: {type(response)}") # Log returning stream and response type
             
-            async def event_generator():
-                # If it's a new conversation, send an initial event with the conversation ID
-                if is_new_conversation:
-                    logger.info(f"Sending initial conversation_id event: {conversation_id}")
-                    yield {
-                        "event": "conversation_created",
-                        "data": str(conversation_id)
-                    }
-                    # Add a small delay to ensure the event is sent before the stream starts
-                    await asyncio.sleep(0.01) 
+        async def event_generator():
+            # If it's a new conversation, send an initial event with the conversation ID
+            if is_new_conversation:
+                logger.info(f"Sending initial conversation_id event: {conversation_id}")
+                yield {
+                    "event": "conversation_created",
+                    "data": str(conversation_id)
+                }
+                # Add a small delay to ensure the event is sent before the stream starts
+                await asyncio.sleep(0.01) 
 
-                # Process the main chat stream
-                async for event_data in process_chat_stream(response, conversation_id, model, api_key.provider, db):
-                    yield event_data
+            content = ""
+            async for chunk in response:
+                content += chunk
+                yield {
+                    "event": "message",
+                    "data": chunk
+                }
 
-            return EventSourceResponse(event_generator())
-
-        else:
-            logger.info(f"Handling non-streaming response. Response type: {type(response)}") # Log handling non-stream and response type
-            # Handle non-streaming response (for OpenAI and potentially others)
-            # Extract content from the response - this part needs to be adapted for other providers if they are not streaming
-            if api_key.provider == "openai":
-                 content = response["choices"][0]["message"]["content"]
-            # Removed non-streaming Google content extraction to focus on streaming
-            # elif api_key.provider == "google":
-            #      # For non-streaming Google response
-            #      content = response["candidates"][0]["content"]["parts"][0]["text"]
-            else:
-                 # Handle other providers if needed
-                 # Log the response object to understand its structure
-                 logger.error(f"Unexpected non-streaming response format or streaming issue. Response: {response}")
-                 content = "Unsupported provider response format or streaming issue" # Updated message
-
-
-            # Add assistant message to conversation
-            assistant_message = await add_message_to_conversation(
+            from app.services.conversation import add_message_to_conversation
+            await add_message_to_conversation(
                 db,
                 MessageCreate(
                     role="assistant",
                     content=content,
                     model=model,
-                    metadata={"response": response}
+                    metadata={"provider": api_key.provider},
                 ),
                 conversation_id
             )
-            logger.info(f"Added assistant message to conversation: {conversation_id}") # Log adding assistant message
 
-            return {
-                "conversation_id": str(conversation_id),
-                "message": {
-                    "id": str(assistant_message.id),
-                    "role": assistant_message.role,
-                    "content": assistant_message.content,
-                    "model": assistant_message.model,
-                    "created_at": assistant_message.created_at.isoformat(),
-                }
+            yield {
+                "event": "done",
+                "data": ""
             }
+            # Process the main chat stream
+
+        return EventSourceResponse(event_generator())
+
     except Exception as e:
         # Log the error with traceback and return an HTTPException
         import traceback
