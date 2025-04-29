@@ -140,30 +140,27 @@ export function ChatInterface({ }: ChatInterfaceProps) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            console.log('Stream finished');
             break;
           }
 
-          buffer += decoder.decode(value, { stream: true });
-          console.log(buffer)
+          const decoded = decoder.decode(value, { stream: true });
+          buffer = decoded;
 
           // Process complete SSE messages in the buffer
           const events = buffer.split('\r\n');
-          buffer = events.pop() || ''; // Keep the last potentially incomplete event in the buffer
+          events.pop()
+          events.pop()
 
+          let eventData = '';
+          let eventType = '';
           events.forEach(event => {
-            const lines = event.split('\n');
-            let eventData = '';
-            let eventType = '';
 
-            lines.forEach(line => {
-              if (line.startsWith('data:')) {
-                eventData += line.substring(5).trim();
-              } else if (line.startsWith('event:')) {
-                eventType = line.substring(6).trim();
-              }
-              // Ignore other lines like 'id:' or comments
-            });
+            if (event.startsWith('data:')) {
+              eventData += event.substring(6);
+            } else if (event.startsWith('event:')) {
+              eventType = event.substring(7);
+              eventData = '';
+            }
 
             // let newConversationId = conversationId; // Keep track of the new conversation ID - Moved outside the loop
 
@@ -190,6 +187,8 @@ export function ChatInterface({ }: ChatInterfaceProps) {
               if (!conversationId && newConversationId) {
                  navigate(`/chat/${newConversationId}`);
                  setConversationId(newConversationId);
+                 setIncomingMessage(null)
+                 setOutgoingMessage(null)
                 //  setIsCreatingNewConversation(false); // Hide placeholder after navigation
               } else {
                 //  setIsCreatingNewConversation(false); // Hide placeholder if it was set for an existing conversation

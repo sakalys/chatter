@@ -13,7 +13,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 
 const googleClientId = '181853076785-uf93784hrobvqqfrgftek08hd5n03m25.apps.googleusercontent.com';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({defaultOptions: {queries: {refetchOnWindowFocus: false, retry: false}}});
 
 export const AuthenticatedOnly = () => {
   const auth = useAuth();
