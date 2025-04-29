@@ -115,6 +115,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
       }
 
       try {
+        const thisModel = selectedModel
         const response = await apiFetchStreaming('POST', '/chat/generate', {
             conversation_id: conversationId,
             model: selectedModel,
@@ -134,17 +135,17 @@ export function ChatInterface({ }: ChatInterfaceProps) {
         }
 
         const decoder = new TextDecoder();
-        let buffer = ''; // Buffer to handle incomplete SSE messages
         let newConversationId = conversationId; // Keep track of the new conversation ID - Moved outside the loop
 
+        let message = '';
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
             break;
           }
 
-          const decoded = decoder.decode(value, { stream: true });
-          buffer = decoded;
+          const buffer = decoder.decode(value, { stream: true });
+          console.log(buffer);
 
           // Process complete SSE messages in the buffer
           const events = buffer.split('\r\n');
@@ -153,49 +154,45 @@ export function ChatInterface({ }: ChatInterfaceProps) {
 
           let eventData = '';
           let eventType = '';
+          let firstData = true;
           events.forEach(event => {
-
             if (event.startsWith('data:')) {
-              eventData += event.substring(6);
+              if (firstData) {
+                firstData = false;
+                eventData = event.substring(6);
+              } else {
+                eventData += "\n" + event.substring(6);
+              }
             } else if (event.startsWith('event:')) {
               eventType = event.substring(7);
               eventData = '';
             }
-
-            // let newConversationId = conversationId; // Keep track of the new conversation ID - Moved outside the loop
-
-            if (eventType === 'conversation_created' && eventData) {
-              // Store the new conversation ID, but don't navigate yet
-              newConversationId = eventData;
-              // setIsCreatingNewConversation(false); // Hide placeholder once ID is received - moved to 'done'
-            } else if (eventType === 'message' && eventData) {
-
-              // Assuming the data is the text chunk
-              setMessages(prev => {
-                // const updatedMessages = prev.map(msg =>
-                //   msg.id === assistantMessageId ? { ...msg, content: msg.content + eventData } : msg // Append content
-                // );
-                // return updatedMessages;
-                return prev;
-              });
-            } else if (eventType === 'done') {
-              // The stream is finished, no more data for this message
-              setIsLoading(false); // Stop loading when done
-
-              // Navigate and update state only after the stream is done
-              // Use newConversationId explicitly for navigation and state update
-              if (!conversationId && newConversationId) {
-                 navigate(`/chat/${newConversationId}`);
-                 setConversationId(newConversationId);
-                 setIncomingMessage(null)
-                 setOutgoingMessage(null)
-                //  setIsCreatingNewConversation(false); // Hide placeholder after navigation
-              } else {
-                //  setIsCreatingNewConversation(false); // Hide placeholder if it was set for an existing conversation
-              }
-            }
-            // Handle other event types if needed
           });
+
+          // let newConversationId = conversationId; // Keep track of the new conversation ID - Moved outside the loop
+
+          if (eventType === 'conversation_created' && eventData) {
+            // Store the new conversation ID, but don't navigate yet
+            newConversationId = eventData;
+            // setIsCreatingNewConversation(false); // Hide placeholder once ID is received - moved to 'done'
+          } else if (eventType === 'message' && typeof eventData === 'string') {
+            message += eventData;
+
+            // Assuming the data is the text chunk
+            setIncomingMessage({model: thisModel, message: message});
+          } else if (eventType === 'done') {
+            // The stream is finished, no more data for this message
+            setIsLoading(false); // Stop loading when done
+
+            // Navigate and update state only after the stream is done
+            // Use newConversationId explicitly for navigation and state update
+            if (!conversationId && newConversationId) {
+                navigate(`/chat/${newConversationId}`);
+                setConversationId(newConversationId);
+                setIncomingMessage(null)
+                setOutgoingMessage(null)
+            }
+          }
         }
 
         // After the stream is done, the message is complete in the state

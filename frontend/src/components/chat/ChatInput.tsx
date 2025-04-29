@@ -9,6 +9,8 @@ interface ChatInputProps {
   apiKeysLoaded?: boolean;
   configuredProviders?: string[];
 }
+// const defaultMsg = 'hi';
+const defaultMsg = 'print me 20 paragraphs of random text';
 
 export function ChatInput({ 
   onSendMessage, 
@@ -17,7 +19,7 @@ export function ChatInput({
   onModelChange,
   configuredProviders = [],
 }: ChatInputProps) {
-  const [message, setMessage] = useState('Generate me 20 paragraphs of text');
+  const [message, setMessage] = useState(defaultMsg);
 
   const availableModels = AVAILABLE_MODELS.filter(model => 
     configuredProviders.includes(model.provider)
@@ -33,7 +35,7 @@ export function ChatInput({
     e.preventDefault();
     if (message.trim() && !isLoading) {
       onSendMessage(message);
-      setMessage('Generate me 20 paragraphs of text');
+      setMessage(defaultMsg);
     }
   };
 
