@@ -163,6 +163,35 @@ async def create_example_conversation(db: AsyncSession, user: User) -> None:
     await db.commit()
     print(f"Added {len(messages_data)} messages to the conversation.")
 
+async def create_mcp_config_fixture(db: AsyncSession, user: User) -> None:
+    """Create an MCP config fixture for the test user."""
+    mcp_url = "https://remote.mcpservers.org/fetch"
+
+    # Check if MCP config with this URL already exists for the user
+    result = await db.execute(
+        select(MCPConfig).where(
+            MCPConfig.user_id == user.id,
+            MCPConfig.url == mcp_url
+        )
+    )
+    existing_config = result.scalar_one_or_none()
+
+    if existing_config:
+        print(f"MCP config with URL {mcp_url} already exists for test user")
+        return
+
+    # Create the MCP config
+    mcp_config = MCPConfig(
+        user_id=user.id,
+        url=mcp_url,
+        name="Remote fetch",
+    )
+
+    db.add(mcp_config)
+    await db.commit()
+    print(f"Created MCP config with URL: {mcp_url} for test user")
+
+
 async def main():
     """Main function to create all fixtures."""
     # Create database engine
@@ -186,6 +215,9 @@ async def main():
         # Create OpenAI API key
         await create_openai_api_key(db, user)
         
+        # Create MCP config fixture
+        await create_mcp_config_fixture(db, user)
+
         # Create example conversation
         await create_example_conversation(db, user)
     

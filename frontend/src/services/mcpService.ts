@@ -24,91 +24,57 @@ interface McpResourceResponse {
 export const mcpService = {
   // Get available tools from an MCP server
   async getTools(serverUrl: string): Promise<McpTool[]> {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Mock response based on server URL
-    if (serverUrl.includes('weather')) {
-      return [
-        {
-          name: 'get_weather',
-          description: 'Get current weather for a location',
-          server: serverUrl
-        },
-        {
-          name: 'get_forecast',
-          description: 'Get weather forecast for a location',
-          server: serverUrl
-        }
-      ];
-    } else if (serverUrl.includes('search')) {
-      return [
-        {
-          name: 'search_web',
-          description: 'Search the web for information',
-          server: serverUrl
-        },
-        {
-          name: 'search_images',
-          description: 'Search for images',
-          server: serverUrl
-        }
-      ];
-    } else {
-      return [
-        {
-          name: 'unknown_tool',
-          description: 'Unknown tool from this server',
-          server: serverUrl
-        }
-      ];
+    // Assuming serverUrl is the mcp_config_id
+    try {
+      const response = await fetch(`/api/v1/mcp_configs/${encodeURIComponent(serverUrl)}/tools`);
+      if (!response.ok) {
+        throw new Error(`Error fetching tools: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data as McpTool[];
+    } catch (error) {
+      console.error('Error in getTools:', error);
+      throw error;
     }
   },
   
   // Call an MCP tool
   async callTool(request: McpToolRequest): Promise<McpToolResponse> {
     const { server, tool, arguments: args } = request;
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock response based on tool
-    if (tool === 'get_weather') {
-      return {
-        result: {
-          location: args.location || 'Unknown',
-          temperature: Math.round(Math.random() * 30),
-          conditions: ['Sunny', 'Cloudy', 'Rainy', 'Snowy'][Math.floor(Math.random() * 4)]
-        }
-      };
-    } else if (tool === 'search_web') {
-      return {
-        result: {
-          query: args.query || 'Unknown',
-          results: [
-            { title: 'Mock search result 1', url: 'https://example.com/1' },
-            { title: 'Mock search result 2', url: 'https://example.com/2' },
-            { title: 'Mock search result 3', url: 'https://example.com/3' }
-          ]
-        }
-      };
-    } else {
-      return {
-        result: `Mock response from ${tool} on server ${server} with arguments ${JSON.stringify(args)}`
-      };
+    // Assuming server is the mcp_config_id
+    try {
+      const response = await fetch(`/api/v1/mcp_configs/${encodeURIComponent(server)}/tools/${encodeURIComponent(tool)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(args), // Send arguments in the body
+      });
+      if (!response.ok) {
+        throw new Error(`Error calling tool: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data as McpToolResponse;
+    } catch (error) {
+      console.error('Error in callTool:', error);
+      throw error;
     }
   },
   
   // Access an MCP resource
   async accessResource(request: McpResourceRequest): Promise<McpResourceResponse> {
     const { server, uri } = request;
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Mock response based on URI
-    return {
-      content: `Mock resource content from ${server} with URI ${uri}`
-    };
-  }
+    // Assuming server is the mcp_config_id
+    try {
+      const response = await fetch(`/api/v1/mcp_configs/${encodeURIComponent(server)}/resources/${encodeURIComponent(uri)}`);
+      if (!response.ok) {
+        throw new Error(`Error accessing resource: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data as McpResourceResponse;
+    } catch (error) {
+      console.error('Error in accessResource:', error);
+      throw error;
+    }
+  },
 };

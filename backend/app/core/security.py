@@ -11,7 +11,8 @@ ALGORITHM = "HS256"
 
 
 def create_access_token(
-    subject: str | Any, expires_delta: timedelta | None = None
+    subject: str, 
+    expires_delta: timedelta | None = None
 ) -> str:
     """
     Create a JWT access token.

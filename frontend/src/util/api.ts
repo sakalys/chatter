@@ -66,6 +66,9 @@ const _apiFetch = async <T = unknown, TData = unknown>(method: Method, endpoint:
 
     let json = null
     try {
+        if (response.status === 204) {
+            return null as T;
+        }
         json = await response.json();
     } catch (e) {
         throw new ServerError({}, response);

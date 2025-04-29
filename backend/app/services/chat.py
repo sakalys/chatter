@@ -45,7 +45,6 @@ async def _generate_google_response(
     # Format messages for Google's API
     formatted_messages = []
     for msg in messages:
-        logger.info(f"Processing message of type: {type(msg)}, with keys: {msg.keys()}")
         if "content" in msg:
             if msg["role"] == "user":
                 formatted_messages.append({"role": "user", "parts": [{"text": msg["content"]}]})

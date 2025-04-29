@@ -35,11 +35,6 @@ export function MainLayout({ children }: PropsWithChildren) {
             <div className="flex-1 overflow-y-auto p-4">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Conversations</h2>
               <div className="space-y-1 mb-6">
-                {newChatState === "idle" && ( // Use context state for idle
-                  <div className="w-full text-left px-3 py-2 rounded-md bg-gray-100">
-                    <div className="font-medium truncate text-gray-500"><em>...</em></div>
-                  </div>
-                )}
                 {newChatState === "creating" && ( // Use context state for creating
                   <div className="w-full text-left px-3 py-2 rounded-md bg-gray-100 animate-pulse">
                     <div className="font-medium truncate text-gray-500">Creating new conversation...</div>

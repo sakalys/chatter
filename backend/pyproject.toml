@@ -24,6 +24,7 @@ dependencies = [
     "google>=3.0.0",
     "google-genai>=1.12.1",
     "openai>=1.76.0",
+    "mcp>=1.6.0",
 ]
 
 [project.optional-dependencies]
