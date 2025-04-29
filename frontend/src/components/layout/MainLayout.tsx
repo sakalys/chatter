@@ -29,7 +29,7 @@ export function MainLayout({ children }: PropsWithChildren) {
           {/* Sidebar */}
           <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-blue-600">Chat Platform</h1>
+              <h1 className="text-xl font-bold text-blue-600">Moo Point</h1>
               <SettingsButton />
             </div>
             <div className="flex-1 overflow-y-auto p-4">

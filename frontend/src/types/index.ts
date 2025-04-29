@@ -86,10 +86,10 @@ export const AVAILABLE_MODELS: Model[] = [
     requiresApiKey: true
   },
   {
-    id: 'gpt-4',
-    name: 'GPT-4',
+    id: 'gpt-4.1',
+    name: 'GPT-4.1',
     provider: 'openai',
-    description: 'OpenAI\'s most advanced model, GPT-4',
+    description: 'OpenAI\'s model with advanced capabilities',
     requiresApiKey: true
   },
   {

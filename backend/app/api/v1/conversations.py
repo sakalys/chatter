@@ -16,7 +16,7 @@ from app.services.conversation import (
     add_message_to_conversation,
     create_conversation,
     delete_conversation,
-    get_conversation_by_id,
+    get_conversation_by_id_and_user_id,
     get_conversation_with_messages,
     get_conversations_by_user,
     get_messages_by_conversation,
@@ -79,7 +79,7 @@ async def update_user_conversation(
     """
     Update a specific conversation.
     """
-    conversation = await get_conversation_by_id(db, conversation_id, current_user.id)
+    conversation = await get_conversation_by_id_and_user_id(db, conversation_id, current_user.id)
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -99,7 +99,7 @@ async def delete_user_conversation(
     """
     Delete a specific conversation.
     """
-    conversation = await get_conversation_by_id(db, conversation_id, current_user.id)
+    conversation = await get_conversation_by_id_and_user_id(db, conversation_id, current_user.id)
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -118,7 +118,7 @@ async def read_conversation_messages(
     """
     Get all messages for a specific conversation.
     """
-    conversation = await get_conversation_by_id(db, conversation_id, current_user.id)
+    conversation = await get_conversation_by_id_and_user_id(db, conversation_id, current_user.id)
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -139,7 +139,7 @@ async def create_conversation_message(
     """
     Add a message to a specific conversation.
     """
-    conversation = await get_conversation_by_id(db, conversation_id, current_user.id)
+    conversation = await get_conversation_by_id_and_user_id(db, conversation_id, current_user.id)
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

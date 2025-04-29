@@ -12,7 +12,7 @@ from app.services.conversation import (
     add_message_to_conversation,
     create_conversation,
     delete_conversation,
-    get_conversation_by_id,
+    get_conversation_by_id_and_user_id,
     get_conversation_with_messages,
     get_conversations_by_user,
     get_messages_by_conversation,

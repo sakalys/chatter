@@ -32,9 +32,10 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   const [conversationId, setConversationId] = useState<string | undefined>(routeConversationId);
   const [messages, setMessages] = useState<(Message)[]>([]);
   const [outgoingMessage, setOutgoingMessage] = useState<MessageCreate | null>(null);
-  const [incomingMessage, setIncomingMessage] = useState<{message: string, model: string} | null>(null);
+  const [incomingMessage, setIncomingMessage] = useState<{ message: string, model: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [conversationTitle, setConversationTitle] = useState<string>('New Conversation');
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-preview-04-17');
   const { newChatState, setNewChatState } = useNewConversation(); // Consume context and setter
 
@@ -96,7 +97,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
       content,
     };
     setOutgoingMessage(userMessage);
-    setIncomingMessage({message: '', model: selectedModel});
+    setIncomingMessage({ message: '', model: selectedModel });
     setIsLoading(true);
 
     // If it's a new conversation, set the state to "creating"
@@ -106,13 +107,18 @@ export function ChatInterface({ }: ChatInterfaceProps) {
 
     try {
       // Determine which provider's API key to use based on selectedModel
-      let provider = 'openai';
+      let provider;
       if (selectedModel.startsWith('claude-')) {
         provider = 'anthropic';
       } else if (selectedModel.startsWith('llama-')) {
         provider = 'meta';
       } else if (selectedModel.startsWith('gemini-')) {
         provider = 'google';
+      } else if (selectedModel.startsWith('gpt-')) {
+        provider = 'openai';
+      } else {
+        toast.error(`Unsupported model: ${selectedModel}`);
+        throw new Error(`Unsupported model: ${selectedModel}`);
       }
 
       // Find the API key ID for the selected provider
@@ -128,11 +134,11 @@ export function ChatInterface({ }: ChatInterfaceProps) {
       try {
         const thisModel = selectedModel
         const response = await apiFetchStreaming('POST', '/chat/generate', {
-            conversation_id: conversationId,
-            model: selectedModel,
-            message: content,
-            api_key_id: apiKey.id,
-            stream: true, // Request streaming
+          conversation_id: conversationId,
+          model: selectedModel,
+          message: content,
+          api_key_id: apiKey.id,
+          stream: true, // Request streaming
         });
 
         if (!response.ok) {
@@ -159,52 +165,56 @@ export function ChatInterface({ }: ChatInterfaceProps) {
           console.log(buffer);
 
           // Process complete SSE messages in the buffer
-          const events = buffer.split('\r\n');
-          events.pop()
-          events.pop()
+          const events = buffer.split('\r\n\r\n');
 
-          let eventData = '';
-          let eventType = '';
-          let firstData = true;
           events.forEach(event => {
-            if (event.startsWith('data:')) {
-              if (firstData) {
-                firstData = false;
-                eventData = event.substring(6);
-              } else {
-                eventData += "\n" + event.substring(6);
+            let eventData = '';
+            let eventType = '';
+            let firstData = true;
+            event.split('\r\n').forEach(line => {
+              if (line.startsWith('data:')) {
+                if (firstData) {
+                  firstData = false;
+                  eventData = line.substring(6);
+                } else {
+                  eventData += "\n" + line.substring(6);
+                }
+              } else if (line.startsWith('event:')) {
+                eventType = line.substring(7);
+                eventData = '';
               }
-            } else if (event.startsWith('event:')) {
-              eventType = event.substring(7);
-              eventData = '';
-            }
-          });
+            })
+            // let newConversationId = conversationId; // Keep track of the new conversation ID - Moved outside the loop
 
-          // let newConversationId = conversationId; // Keep track of the new conversation ID - Moved outside the loop
+            if (eventType === 'conversation_created' && eventData) {
+              // Store the new conversation ID, but don't navigate yet
+              newConversationId = eventData;
+              // setNewChatState("no"); // Use context setter - Removed as per user feedback
+            } else if (eventType === 'message' && typeof eventData === 'string') {
+              message += eventData;
 
-          if (eventType === 'conversation_created' && eventData) {
-            // Store the new conversation ID, but don't navigate yet
-            newConversationId = eventData;
-            // setNewChatState("no"); // Use context setter - Removed as per user feedback
-          } else if (eventType === 'message' && typeof eventData === 'string') {
-            message += eventData;
+              // Assuming the data is the text chunk
+              setIncomingMessage({ model: thisModel, message: message });
+            } else if (eventType === 'done') {
+              // The stream is finished, no more data for this message
+              setIsLoading(false); // Stop loading when done
 
-            // Assuming the data is the text chunk
-            setIncomingMessage({model: thisModel, message: message});
-          } else if (eventType === 'done') {
-            // The stream is finished, no more data for this message
-            setIsLoading(false); // Stop loading when done
-
-            // Navigate and update state only after the stream is done
-            // Use newConversationId explicitly for navigation and state update
-            if (!conversationId && newConversationId) {
+              // Navigate and update state only after the stream is done
+              // Use newConversationId explicitly for navigation and state update
+              if (!conversationId && newConversationId) {
                 navigate(`/chat/${newConversationId}`);
                 setConversationId(newConversationId);
                 setIncomingMessage(null)
                 setOutgoingMessage(null)
                 setNewChatState("no"); // Set state to "no" after navigation
+              }
+            } else if (eventType === 'conversation_title_updated' && typeof eventData === 'string') {
+              // Update the conversation title state
+              setConversationTitle(eventData);
             }
-          }
+
+          });
+
         }
 
         // After the stream is done, the message is complete in the state
@@ -238,11 +248,11 @@ export function ChatInterface({ }: ChatInterfaceProps) {
     <div className="flex flex-col h-full relative">
       {/* Header with Conversation Title and LLM Selector */}
       <div className="p-4 flex shrink-0 items-center justify-between border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-800">{conversationId ? `Conversation ${conversationId.substring(0, 8)}...` : 'New Conversation'}</h2>
+        <h2 className="text-xl font-bold text-gray-800">{conversationTitle}</h2>
       </div>
 
-        <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
-          <div>
+      <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
+        <div>
           {messages.map((message) => (
             <ChatMessage
               id={message.id}
@@ -259,13 +269,13 @@ export function ChatInterface({ }: ChatInterfaceProps) {
               model={outgoingMessage.model}
             />
           )}
-            {incomingMessage !== null && (
-              <IncomingMessage
-                incomingMessage={incomingMessage.message}
-                model={incomingMessage.model}
-              />
-            )}
-          </div>
+          {incomingMessage !== null && (
+            <IncomingMessage
+              incomingMessage={incomingMessage.message}
+              model={incomingMessage.model}
+            />
+          )}
+        </div>
       </div>
       <ChatInput
         onSendMessage={handleSendMessage}
@@ -284,7 +294,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   );
 }
 
-export function Nl2p ({ text }: { text: string }) {
+export function Nl2p({ text }: { text: string }) {
   return (
     <div className="prose prose-sm">
       {/* make paragraphs out of text */}

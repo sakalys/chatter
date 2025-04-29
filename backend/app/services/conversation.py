@@ -30,9 +30,33 @@ async def get_conversations_by_user(
     )
     return result.scalars().all()
 
-
 async def get_conversation_by_id(
-    db: AsyncSession, conversation_id: UUID, user_id: UUID
+    db: AsyncSession,
+    conversation_id: UUID,
+) -> Conversation | None:
+    """
+    Get a conversation by ID for a specific user.
+    
+    Args:
+        db: Database session
+        conversation_id: Conversation ID
+        user_id: User ID
+        
+    Returns:
+        Conversation object or None if not found
+    """
+    result = await db.execute(
+        select(Conversation)
+        .where(
+            Conversation.id == conversation_id,
+        )
+    )
+    return result.scalars().first()
+
+async def get_conversation_by_id_and_user_id(
+    db: AsyncSession,
+    conversation_id: UUID,
+    user_id: UUID,
 ) -> Conversation | None:
     """
     Get a conversation by ID for a specific user.

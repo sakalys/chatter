@@ -8,7 +8,6 @@ from app.core.dependencies import DB, get_current_user
 from app.models.user import User
 from app.services.api_key import get_api_key_by_id
 from app.services.chat import handle_chat_request
-from app.services.conversation import get_conversation_by_id
 from app.schemas.chat import ChatCompletionRequest
 
 router = APIRouter()

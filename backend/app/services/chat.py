@@ -5,6 +5,7 @@ from typing import Any, AsyncGenerator
 from uuid import UUID
 import asyncio
 from google import genai
+from openai import AsyncOpenAI # Import AsyncOpenAI
 
 import httpx
 from fastapi import HTTPException, status
@@ -15,7 +16,8 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.schemas.message import MessageCreate
 from app.services.api_key import decrypt_api_key
-from app.services.conversation import add_message_to_conversation
+from app.services.conversation import add_message_to_conversation, get_conversation_by_id, get_conversation_by_id_and_user_id, update_conversation
+from app.schemas.conversation import ConversationCreate, ConversationUpdate
 
 logger = logging.getLogger(__name__) # Get logger
 
@@ -66,14 +68,40 @@ async def _generate_google_response(
 
     return
 
+async def _generate_openai_response(
+    messages: list[dict[str, str]],
+    model: str,
+    api_key: str,
+) -> AsyncGenerator[str, None]:
+    """
+    Generate a chat response from the OpenAI API using the SDK.
+
+    Args:
+        messages: List of messages in the conversation
+        model: Model to use for generation
+        api_key: Decrypted OpenAI API key
+
+    Returns:
+        Streaming response from the OpenAI API
+    """
+    client = AsyncOpenAI(api_key=api_key)
+
+    stream = await client.chat.completions.create(
+        model=model,
+        messages=messages,
+        stream=True,
+    )
+
+    async for chunk in stream:
+        if chunk.choices and chunk.choices[0].delta.content is not None:
+            yield chunk.choices[0].delta.content
+
 
 async def generate_chat_response(
-    conversation: Conversation,
     messages: list[dict[str, str]], # Changed type hint to match _generate functions
     model: str,
     api_key: str,  # Changed to expect decrypted key string
     provider: str,  # Added provider parameter
-    stream: bool = False,
 ) -> AsyncGenerator[str, None]:
     """
     Generate a chat response from an LLM provider.
@@ -84,135 +112,22 @@ async def generate_chat_response(
         model: Model to use for generation
         api_key: Decrypted API key string
         provider: Provider name (openai, anthropic, or google)
-        stream: Whether to stream the response
         
     Returns:
         Response from the LLM provider or streaming response object
     """
-    logger.info(f"Generating chat response for model: {model}, stream: {stream}") # Log generation request
     
     if provider == "google":
-        response = _generate_google_response( messages, model, api_key)
-
+        response = _generate_google_response(messages, model, api_key)
+        return response
+    elif provider == "openai":
+        response = _generate_openai_response(messages, model, api_key)
         return response
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=f"Unsupported LLM provider: {provider}",
     )
-
-
-async def process_chat_stream(
-    stream_response: Any,
-    conversation_id: UUID,
-    model: str,
-    provider: str,
-    db
-):
-    """
-    Process a streaming chat response.
-    
-    Args:
-        stream_response: Streaming response from the LLM provider (could be httpx.Response, context manager, or generator)
-        conversation_id: Conversation ID
-        model: Model used for generation
-        provider: Provider name
-        db: Database session
-        
-    Returns:
-        Generator for SSE events
-    """
-    logger.info(f"Processing chat stream for conversation: {conversation_id}")
-    content = ""
-    
-    # Handle the streaming response
-    if hasattr(stream_response, '__call__'):
-        logger.info("Stream response is a generator function, calling it")
-        async for text in stream_response():
-            logger.info(f"Received text from generator: {text}")
-            content += text
-            yield {
-                "event": "message",
-                "data": text
-            }
-    elif hasattr(stream_response, 'aiter_text'):
-        logger.info("Stream response is a direct httpx.Response object")
-        logger.info(f"Response status code: {stream_response.status_code}")
-        logger.info(f"Response headers: {stream_response.headers}")
-        
-        async for chunk in stream_response.aiter_text():
-            try:
-                data = json.loads(chunk)
-                logger.info(f"Parsed JSON data: {data}")
-                
-                text = ""
-                if provider == "google":
-                    if "candidates" in data and data["candidates"]:
-                        logger.info(f"Found candidates: {data['candidates']}")
-                        candidate = data["candidates"][0]
-                        if "content" in candidate:
-                            logger.info(f"Found content in candidate: {candidate['content']}")
-                            if "parts" in candidate["content"]:
-                                logger.info(f"Found parts in content: {candidate['content']['parts']}")
-                                for part in candidate["content"]["parts"]:
-                                    if "text" in part:
-                                        text += part["text"]
-                                        logger.info(f"Found text in part: {part['text']}")
-                else:
-                    if "text" in data:
-                        text = data["text"]
-                        logger.info(f"Found text in 'text' key: {text}")
-                    elif "candidates" in data and data["candidates"]:
-                        logger.info(f"Found candidates: {data['candidates']}")
-                        candidate = data["candidates"][0]
-                        if "content" in candidate:
-                            logger.info(f"Found content in candidate: {candidate['content']}")
-                            if "parts" in candidate["content"]:
-                                logger.info(f"Found parts in content: {candidate['content']['parts']}")
-                                for part in candidate["content"]["parts"]:
-                                    if "text" in part:
-                                        text += part["text"]
-                                        logger.info(f"Found text in part: {part['text']}")
-                
-                if not text:
-                    logger.info(f"No text found in expected locations. Data keys: {data.keys()}")
-
-                if text:
-                    content += text
-                    logger.info(f"Yielding text: {text}")
-                    yield {
-                        "event": "message",
-                        "data": text
-                    }
-                else:
-                    logger.info("No text extracted from chunk")
-
-            except json.JSONDecodeError as e:
-                logger.error(f"Could not decode JSON from chunk: {chunk}. Error: {e}")
-                pass
-            except Exception as e:
-                logger.error(f"Error processing stream chunk: {e}", exc_info=True)
-                pass
-    else:
-        logger.error(f"Unexpected stream response type: {type(stream_response)}")
-        yield {
-            "event": "error",
-            "data": "Unexpected stream response type"
-        }
-
-    # After the stream is done, save the complete message to the database
-    if content:
-        logger.info("Stream finished, saving message to database")
-
-    # End event
-    logger.info("Sending done event")
-    yield {
-        "event": "done",
-        "data": ""
-    }
-
-
-from app.schemas.conversation import ConversationCreate
 
 async def handle_chat_request(
     db,
@@ -235,8 +150,8 @@ async def handle_chat_request(
         api_key: API key to use for the request
         stream: Whether to stream the response
         
-    Returns:
-        Response from the LLM provider or SSE response, including the conversation ID
+        Returns:
+            Response from the LLM provider or SSE response, including the conversation ID
     """
     logger.info(f"Handling chat request for user: {user_id}, conversation: {conversation_id}, stream: {stream}") # Log handling request
     
@@ -250,8 +165,7 @@ async def handle_chat_request(
         logger.info(f"Created new conversation with ID: {conversation_id}") # Log new conversation
     else:
         # Get conversation to ensure it exists and belongs to the user
-        from app.services.conversation import get_conversation_by_id
-        conversation = await get_conversation_by_id(db, conversation_id, user_id)
+        conversation = await get_conversation_by_id_and_user_id(db, conversation_id, user_id)
         if not conversation:
             logger.error(f"Conversation not found for ID: {conversation_id}") # Log error
             raise HTTPException(
@@ -291,12 +205,10 @@ async def handle_chat_request(
         
         # Generate response - pass the formatted messages list
         response = await generate_chat_response(
-            conversation=conversation,
             messages=formatted_messages,
             model=model,
             api_key=decrypted_key,  # Pass the decrypted key directly
             provider=api_key.provider,  # Pass the provider separately
-            stream=stream
         )
         logger.info(f"Finished generate_chat_response. Response type: {type(response)}") # Log after calling generation and response type
             
@@ -335,7 +247,24 @@ async def handle_chat_request(
                 "event": "done",
                 "data": ""
             }
-            # Process the main chat stream
+
+            # Generate and set conversation title after the first response
+            if is_new_conversation and content:
+                generated_title = await generate_and_set_conversation_title(
+                    db=db,
+                    conversation_id=conversation_id,
+                    user_message=user_message,
+                    assistant_message=content,
+                    api_key=decrypted_key,
+                    provider=api_key.provider,
+                    model=model
+                )
+                if generated_title:
+                    logger.info(f"Sending conversation_title_updated event: {generated_title}")
+                    yield {
+                        "event": "conversation_title_updated",
+                        "data": generated_title
+                    }
 
         return EventSourceResponse(event_generator())
 
@@ -347,3 +276,47 @@ async def handle_chat_request(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating chat response: {e}"
         )
+
+async def generate_and_set_conversation_title(
+    db,
+    conversation_id: UUID,
+    user_message: str,
+    assistant_message: str,
+    api_key: str,
+    provider: str,
+    model: str,
+) -> str:
+    """
+    Generates a title for the conversation based on the initial message and response,
+    updates the conversation in the database, and sends an SSE event to the frontend.
+    """
+    logger.info(f"Generating title for conversation: {conversation_id}")
+
+    # Construct prompt for title generation
+    prompt = f"Generate a short, concise title (under 10 words) for the following conversation based on the user's initial message and the assistant's response:\n\nUser: {user_message}\nAssistant: {assistant_message}\n\nTitle:"
+
+    title = ''
+    try:
+        generator = await generate_chat_response(
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            model=model,
+            api_key=api_key,
+            provider=provider,
+        )
+
+        async for title_part in generator:
+            title += title_part
+
+        if title:
+            # Update the conversation in the database
+            conversation = await get_conversation_by_id(db, conversation_id) # User ID is not needed for internal update
+            if conversation:
+                await update_conversation(db, conversation, ConversationUpdate(title=title))
+
+    except Exception as e:
+        logger.error(f"Error generating or setting conversation title: {e}", exc_info=True)
+        # Don't raise an exception here, title generation is not critical
+
+    return title

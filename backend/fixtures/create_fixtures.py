@@ -64,6 +64,40 @@ async def create_test_user(db: AsyncSession) -> User:
     
     return user
 
+async def create_openai_api_key(db: AsyncSession, user: User) -> None:
+    # Check if user already has a Google API key using async query
+    result = await db.execute(
+        select(ApiKey).where(
+            ApiKey.user_id == user.id,
+            ApiKey.provider == "openai"
+        )
+    )
+    existing_key = result.scalar_one_or_none()
+    
+    if existing_key:
+        return
+    
+    # Read the API key from the gitignored file
+    api_key_path = Path(__file__).parent / "openai_api_key.txt"
+    if not api_key_path.exists():
+        print(f"Error: API key file not found at {api_key_path}")
+        return
+    
+    api_key = api_key_path.read_text().strip()
+    if not api_key:
+        print("Error: API key file is empty")
+        return
+    
+    # Create the API key
+    api_key_in = ApiKeyCreate(
+        provider="openai",
+        name="OpenAI API Key",
+        key=api_key,
+    )
+    
+    await create_api_key(db, api_key_in, user.id)
+    print("Created OpenAI API key for test user")
+
 async def create_google_api_key(db: AsyncSession, user: User) -> None:
     """Create a Google API key for the test user."""
     # Check if user already has a Google API key using async query
@@ -120,8 +154,11 @@ async def main():
         
         # Create Google API key
         await create_google_api_key(db, user)
+
+        # Create OpenAI API key
+        await create_openai_api_key(db, user)
     
     print("Fixtures creation completed!")
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

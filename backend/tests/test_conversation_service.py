@@ -12,7 +12,7 @@ from app.services.conversation import (
     add_message_to_conversation,
     create_conversation,
     delete_conversation,
-    get_conversation_by_id,
+    get_conversation_by_id_and_user_id,
     get_conversation_with_messages,
     get_conversations_by_user,
     get_messages_by_conversation,
@@ -55,7 +55,7 @@ async def test_create_conversation(test_db: AsyncSession, test_user: User):
 @pytest.mark.asyncio
 async def test_get_conversation_by_id(test_db: AsyncSession, test_user: User, test_conversation):
     """Test getting a conversation by ID."""
-    conversation = await get_conversation_by_id(test_db, test_conversation.id, test_user.id)
+    conversation = await get_conversation_by_id_and_user_id(test_db, test_conversation.id, test_user.id)
     
     assert conversation is not None
     assert conversation.id == test_conversation.id
@@ -67,7 +67,7 @@ async def test_get_conversation_by_id(test_db: AsyncSession, test_user: User, te
 async def test_get_conversation_by_id_not_found(test_db: AsyncSession, test_user: User):
     """Test getting a conversation by ID that doesn't exist."""
     non_existent_id = UUID("00000000-0000-0000-0000-000000000000")
-    conversation = await get_conversation_by_id(test_db, non_existent_id, test_user.id)
+    conversation = await get_conversation_by_id_and_user_id(test_db, non_existent_id, test_user.id)
     
     assert conversation is None
 
@@ -108,7 +108,7 @@ async def test_delete_conversation(test_db: AsyncSession, test_user: User):
     await delete_conversation(test_db, conversation)
     
     # Try to get the deleted conversation
-    deleted_conversation = await get_conversation_by_id(test_db, conversation.id, test_user.id)
+    deleted_conversation = await get_conversation_by_id_and_user_id(test_db, conversation.id, test_user.id)
     assert deleted_conversation is None
 
 
