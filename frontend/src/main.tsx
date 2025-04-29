@@ -10,6 +10,7 @@ import { ChatInterface } from './components/chat/ChatInterface.tsx';
 import { ToastContainer } from 'react-toastify';
 import LoadingSpinner from './components/ui/LoadingSpinner.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
+import { NewConversationProvider } from './context/NewConversationContext.tsx';
 
 const googleClientId = '181853076785-uf93784hrobvqqfrgftek08hd5n03m25.apps.googleusercontent.com';
 
@@ -83,9 +84,13 @@ const router = createBrowserRouter([
               children: [
                   {
                       path: '/chat',
-                      element: <MainLayout>
-                        <ChatInterface />
-                      </MainLayout>,
+                      element: (
+                        <NewConversationProvider> {/* Wrap with NewConversationProvider */}
+                          <MainLayout>
+                            <ChatInterface />
+                          </MainLayout>
+                        </NewConversationProvider>
+                      ),
                       children: [
                           {
                               path: '/chat',

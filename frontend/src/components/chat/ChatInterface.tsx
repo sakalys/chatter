@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import { Message, ApiKey, MessageCreate } from '../../types'; // Import ApiKey type
+import { Message, ApiKey, MessageCreate } from '../../types';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, apiFetchStreaming } from '../../util/api';
+import { useNewConversation } from '../../context/NewConversationContext';
 
 interface ChatInterfaceProps {
 }
@@ -26,6 +27,7 @@ const fetchApiKeys = async (): Promise<ApiKey[]> => {
 export function ChatInterface({ }: ChatInterfaceProps) {
   const { id: routeConversationId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [conversationId, setConversationId] = useState<string | undefined>(routeConversationId);
   const [messages, setMessages] = useState<(Message)[]>([]);
@@ -33,7 +35,8 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   const [incomingMessage, setIncomingMessage] = useState<{message: string, model: string} | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-preview-04-17'); // Add selectedModel state
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-preview-04-17');
+  const { newChatState, setNewChatState } = useNewConversation(); // Consume context and setter
 
   // Fetch messages using React Query
   const { data: fetchedMessages, error: messagesError, isLoading: isLoadingMessages } = useQuery<Message[], Error>({
@@ -71,6 +74,14 @@ export function ChatInterface({ }: ChatInterfaceProps) {
     setConversationId(routeConversationId);
   }, [routeConversationId]);
 
+  // Effect to set newChatState to "no" when navigating to an existing chat route
+  useEffect(() => {
+    if (!conversationId) {
+      setNewChatState("idle");
+    }
+  }, [conversationId]);
+
+
   const handleSendMessage = async (content: string) => {
     // Prevent sending message if API keys are not loaded
     if (!apiKeys || apiKeys.length === 0) {
@@ -88,9 +99,9 @@ export function ChatInterface({ }: ChatInterfaceProps) {
     setIncomingMessage({message: '', model: selectedModel});
     setIsLoading(true);
 
-    // If it's a new conversation, set the state in MainLayout to show the placeholder
+    // If it's a new conversation, set the state to "creating"
     if (!conversationId) {
-      // setIsCreatingNewConversation(true);
+      setNewChatState("creating"); // Use context setter
     }
 
     try {
@@ -174,7 +185,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
           if (eventType === 'conversation_created' && eventData) {
             // Store the new conversation ID, but don't navigate yet
             newConversationId = eventData;
-            // setIsCreatingNewConversation(false); // Hide placeholder once ID is received - moved to 'done'
+            // setNewChatState("no"); // Use context setter - Removed as per user feedback
           } else if (eventType === 'message' && typeof eventData === 'string') {
             message += eventData;
 
@@ -191,6 +202,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
                 setConversationId(newConversationId);
                 setIncomingMessage(null)
                 setOutgoingMessage(null)
+                setNewChatState("no"); // Set state to "no" after navigation
             }
           }
         }
@@ -208,7 +220,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
       // Handle error for both streaming and non-streaming
       console.error('Error sending message:', error);
       setIsLoading(false); // Stop loading on error
-      // setIsCreatingNewConversation(false); // Hide placeholder on error
+      setNewChatState("idle"); // Set state to "idle" on error in a new chat
       const errorMessage: Message = {
         id: `system-${Date.now()}-${messages.length + 1}`, // More unique key for errors
         role: 'system',
