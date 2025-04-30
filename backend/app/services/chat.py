@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import logging
+from re import S
 from typing import Any, AsyncGenerator, Literal, Union
 from uuid import UUID
 from google import genai
@@ -75,7 +76,7 @@ async def _generate_google_response(
     ]
 
     # Format messages for Google's API
-    formatted_messages = []
+    formatted_messages: list[Any] = []
     for msg in messages:
         if "content" in msg:
             if msg["role"] == "user":
@@ -89,7 +90,6 @@ async def _generate_google_response(
 
     client = genai.Client(api_key=api_key)
 
-    times = []
     async for chunk in await client.aio.models.generate_content_stream(
         # model="gemini-2.0-flash-001",
         model=model,
@@ -98,11 +98,11 @@ async def _generate_google_response(
             "tools": tools,
         },
     ):
-        print(chunk.candidates[0])
         if chunk.candidates[0].content.parts[0].function_call:
             function_call = chunk.candidates[0].content.parts[0].function_call
-            print('function_call', function_call)
-            yield "Function call: " + json.dumps(function_call.model_dump())
+
+            yield StreamEvent("function_call", json.dumps(function_call.model_dump()))
+
             continue
             # # Call the MCP server with the predicted tool
             # result = await session.call_tool(
@@ -112,7 +112,7 @@ async def _generate_google_response(
             # Continue as shown in step 4 of "How Function Calling Works"
             # and create a user friendly response
 
-        yield chunk.text
+        yield StreamEvent("text", chunk.text if chunk.text else "")
 
     return
 
@@ -296,12 +296,25 @@ async def handle_chat_request(
                 }
 
             content = ""
-            async for chunk in response:
-                content += chunk
-                yield {
-                    "event": "message",
-                    "data": chunk
-                }
+            async for event in response:
+                if event.event == "function_call":
+                    # Handle function call event
+                    logger.debug(f"Function call event: {event.data}")
+                    yield {
+                        "event": "function_call",
+                        "data": event.data
+                    }
+
+                elif event.event == "text":
+                    # Handle text event
+                    content += event.data
+
+                    yield {
+                        "event": "message",
+                        "data": event.data
+                    }
+                else:
+                    logger.warning(f"Unknown event type: {event.event}")
 
             await add_message_to_conversation(
                 db,
