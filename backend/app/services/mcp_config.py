@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from app.models.mcp_tool import Tool
+from app.models.mcp_tool import MCPTool
 from app.models.user import User
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -128,11 +128,11 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> None:
             result = await session.list_tools()
 
             # Delete existing tools
-            await db.execute(delete(Tool).where(Tool.mcp_config_id == mcp_config.id))
+            await db.execute(delete(MCPTool).where(MCPTool.mcp_config_id == mcp_config.id))
 
             # Add new tools
             for tool_data in result.tools:
-                tool = Tool(
+                tool = MCPTool(
                     mcp_config_id=mcp_config.id,
                     name=tool_data.name,
                     description=tool_data.description,
@@ -149,7 +149,7 @@ async def create_mcp_tool(
     name: str,
     description: str | None,
     inputSchema: dict,
-) -> Tool:
+) -> MCPTool:
     """
     Create a new MCP tool for a given MCP configuration.
 
@@ -163,7 +163,7 @@ async def create_mcp_tool(
     Returns:
         The created Tool object
     """
-    tool = Tool(
+    tool = MCPTool(
         mcp_config=mcp_config,
         name=name,
         description=description,

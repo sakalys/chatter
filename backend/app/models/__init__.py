@@ -5,4 +5,4 @@ from app.models.message import Message
 from app.models.user import User
 
 # For Alembic to detect all models
-__all__ = ["User", "ApiKey", "Conversation", "Message", "MCPConfig"]
+__all__ = ["User", "ApiKey", "Conversation", "Message", "MCPConfig", "MCPToolUse", "Tool"]

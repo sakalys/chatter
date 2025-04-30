@@ -19,4 +19,4 @@ class MCPConfig(Base):
 
     # Relationships
     user = relationship("User", back_populates="mcp_configs")
-    tools = relationship("Tool", back_populates="mcp_config")
+    tools = relationship("MCPTool", back_populates="mcp_config")

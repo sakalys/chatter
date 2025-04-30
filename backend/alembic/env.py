@@ -14,6 +14,8 @@ from app.db.base import Base
 from app.models import api_key # noqa: F401
 from app.models import conversation # noqa: F401
 from app.models import mcp_config # noqa: F401
+from app.models import mcp_tool # noqa: F401
+from app.models import mcp_tool_use # noqa: F401
 from app.models import message # noqa: F401
 from app.models import user # noqa: F401
 

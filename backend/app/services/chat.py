@@ -14,7 +14,7 @@ from sse_starlette.sse import EventSourceResponse
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.mcp_config import MCPConfig
-from app.models.mcp_tool import Tool
+from app.models.mcp_tool import MCPTool
 from app.models.message import Message
 from app.schemas.message import MessageCreate
 from app.models.user import User # Import User model
@@ -43,7 +43,7 @@ async def _generate_google_response(
     messages: list[dict[str, str]],
     model: str,
     api_key: str,
-    mcp_tools: list[Tool],
+    mcp_tools: list[MCPTool],
 ) -> AsyncGenerator[StreamEvent, None]:
     """
     Generate a chat response from the Google API.
@@ -120,7 +120,7 @@ async def _generate_openai_response(
     messages: list[dict[str, str]],
     model: str,
     api_key: str,
-    mcp_tools: list[Tool],
+    mcp_tools: list[MCPTool],
 ) -> AsyncGenerator[StreamEvent, None]:
     """
     Generate a chat response from the OpenAI API using the SDK, including tool definitions.
@@ -184,7 +184,7 @@ async def generate_chat_response(
         Response from the LLM provider or streaming response object
     """
     
-    all_mcp_tools: list[Tool] = []
+    all_mcp_tools: list[MCPTool] = []
 
     configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
 
@@ -295,11 +295,15 @@ async def handle_chat_request(
                     "data": str(conversation_id)
                 }
 
+            tool_calls = []
+
             content = ""
             async for event in response:
                 if event.event == "function_call":
                     # Handle function call event
                     logger.debug(f"Function call event: {event.data}")
+                    data = json.loads(event.data)
+                    tool_calls.append(data)
                     yield {
                         "event": "function_call",
                         "data": event.data

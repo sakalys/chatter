@@ -1,6 +1,5 @@
 import uuid
 from app.models.mcp_config import MCPConfig
-from app.models.user import User
 from sqlalchemy import Column, ForeignKey, String, types
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, Mapped
@@ -9,7 +8,7 @@ from app.db.base import Base
 from typing import Any, Optional
 
 
-class Tool(Base):
+class MCPTool(Base):
     """Model for storing MCP tools."""
 
     __tablename__ = "mcp_tools"
@@ -21,5 +20,4 @@ class Tool(Base):
     inputSchema: dict[str, Any] = Column(types.JSON, nullable=False)
 
     # Relationships
-    mcp_config: Mapped[MCPConfig] = relationship(MCPConfig, back_populates="tools")
-
+    mcp_config: Mapped[MCPConfig] = relationship(back_populates="tools")
