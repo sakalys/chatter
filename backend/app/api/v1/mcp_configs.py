@@ -15,7 +15,7 @@ from app.services.mcp import (
 from app.services.mcp_config import (
     create_mcp_config,
     delete_mcp_config,
-    get_mcp_config_by_id,
+    get_mcp_config_by_id_and_user_id,
     get_mcp_configs_by_user,
     update_mcp_config,
 )
@@ -44,7 +44,7 @@ async def create_user_mcp_config(
     """
     Create a new MCP configuration for the current user.
     """
-    mcp_config = await create_mcp_config(db, mcp_config_in, current_user.id)
+    mcp_config = await create_mcp_config(db, mcp_config_in, current_user)
     return mcp_config
 
 
@@ -57,7 +57,7 @@ async def read_mcp_config(
     """
     Get a specific MCP configuration by id.
     """
-    mcp_config = await get_mcp_config_by_id(db, mcp_config_id, current_user.id)
+    mcp_config = await get_mcp_config_by_id_and_user_id(db, mcp_config_id, current_user.id)
     if not mcp_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -76,7 +76,7 @@ async def update_user_mcp_config(
     """
     Update a specific MCP configuration.
     """
-    mcp_config = await get_mcp_config_by_id(db, mcp_config_id, current_user.id)
+    mcp_config = await get_mcp_config_by_id_and_user_id(db, mcp_config_id, current_user.id)
     if not mcp_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -96,7 +96,7 @@ async def delete_user_mcp_config(
     """
     Delete a specific MCP configuration.
     """
-    mcp_config = await get_mcp_config_by_id(db, mcp_config_id, current_user.id)
+    mcp_config = await get_mcp_config_by_id_and_user_id(db, mcp_config_id, current_user.id)
     if not mcp_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -115,7 +115,7 @@ async def read_mcp_tools(
     """
     List all tools available from an MCP server.
     """
-    mcp_config = await get_mcp_config_by_id(db, mcp_config_id, current_user.id)
+    mcp_config = await get_mcp_config_by_id_and_user_id(db, mcp_config_id, current_user.id)
     if not mcp_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -135,7 +135,7 @@ async def read_mcp_resources(
     """
     List all resources available from an MCP server.
     """
-    mcp_config = await get_mcp_config_by_id(db, mcp_config_id, current_user.id)
+    mcp_config = await get_mcp_config_by_id_and_user_id(db, mcp_config_id, current_user.id)
     if not mcp_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -157,7 +157,7 @@ async def use_mcp_tool(
     """
     Call an MCP tool.
     """
-    mcp_config = await get_mcp_config_by_id(db, mcp_config_id, current_user.id)
+    mcp_config = await get_mcp_config_by_id_and_user_id(db, mcp_config_id, current_user.id)
     if not mcp_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -178,7 +178,7 @@ async def access_mcp_resource_endpoint(
     """
     Access an MCP resource.
     """
-    mcp_config = await get_mcp_config_by_id(db, mcp_config_id, current_user.id)
+    mcp_config = await get_mcp_config_by_id_and_user_id(db, mcp_config_id, current_user.id)
     if not mcp_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

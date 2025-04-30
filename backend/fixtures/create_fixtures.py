@@ -11,11 +11,13 @@ from app.models.user import User
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.message import Message
-from app.models.mcp_config import MCPConfig
+from app.models.mcp_config import MCPConfig, Tool
 from app.schemas.user import UserCreate
 from app.services.user import create_user, get_user_by_email
 from app.services.api_key import create_api_key
 from app.schemas.api_key import ApiKeyCreate
+from app.services.mcp_config import create_mcp_config, create_mcp_tool
+from app.schemas.mcp_config import MCPConfigCreate
 
 async def cleanup_database(db: AsyncSession) -> None:
     """Clean up all data from the database."""
@@ -62,18 +64,6 @@ async def create_test_user(db: AsyncSession) -> User:
     return user
 
 async def create_openai_api_key(db: AsyncSession, user: User) -> None:
-    # Check if user already has a Google API key using async query
-    result = await db.execute(
-        select(ApiKey).where(
-            ApiKey.user_id == user.id,
-            ApiKey.provider == "openai"
-        )
-    )
-    existing_key = result.scalar_one_or_none()
-    
-    if existing_key:
-        return
-    
     # Read the API key from the gitignored file
     api_key_path = Path(__file__).parent / "openai_api_key.txt"
     if not api_key_path.exists():
@@ -96,20 +86,6 @@ async def create_openai_api_key(db: AsyncSession, user: User) -> None:
     print("Created OpenAI API key for test user")
 
 async def create_google_api_key(db: AsyncSession, user: User) -> None:
-    """Create a Google API key for the test user."""
-    # Check if user already has a Google API key using async query
-    result = await db.execute(
-        select(ApiKey).where(
-            ApiKey.user_id == user.id,
-            ApiKey.provider == "google"
-        )
-    )
-    existing_key = result.scalar_one_or_none()
-    
-    if existing_key:
-        print("Google API key already exists for test user")
-        return
-    
     # Read the API key from the gitignored file
     api_key_path = Path(__file__).parent / "google_api_key.txt"
     if not api_key_path.exists():
@@ -137,7 +113,7 @@ async def create_example_conversation(db: AsyncSession, user: User) -> None:
     print("Creating example conversation...")
     
     # Create a new conversation
-    conversation = Conversation(user_id=user.id, title="Example Conversation")
+    conversation = Conversation(user=user, title="Example Conversation")
     db.add(conversation)
     await db.commit()
     await db.refresh(conversation)
@@ -154,7 +130,7 @@ async def create_example_conversation(db: AsyncSession, user: User) -> None:
     
     for msg_data in messages_data:
         message = Message(
-            conversation_id=conversation.id,
+            conversation=conversation,
             content=msg_data["content"],
             role=msg_data["role"],
         )
@@ -163,34 +139,43 @@ async def create_example_conversation(db: AsyncSession, user: User) -> None:
     await db.commit()
     print(f"Added {len(messages_data)} messages to the conversation.")
 
-async def create_mcp_config_fixture(db: AsyncSession, user: User) -> None:
-    """Create an MCP config fixture for the test user."""
+async def create_mcp_config_fixture(db: AsyncSession, user: User) -> MCPConfig:
+    """Create an MCP config fixture for the test user using the service."""
     mcp_url = "https://remote.mcpservers.org/fetch"
+    mcp_name = "Remote fetch"
 
-    # Check if MCP config with this URL already exists for the user
-    result = await db.execute(
-        select(MCPConfig).where(
-            MCPConfig.user_id == user.id,
-            MCPConfig.url == mcp_url
-        )
-    )
-    existing_config = result.scalar_one_or_none()
-
-    if existing_config:
-        print(f"MCP config with URL {mcp_url} already exists for test user")
-        return
-
-    # Create the MCP config
-    mcp_config = MCPConfig(
-        user_id=user.id,
+    # Create the MCP config using the service function
+    mcp_config_in = MCPConfigCreate(
+        name=mcp_name,
         url=mcp_url,
-        name="Remote fetch",
+        configuration=None, # Assuming no additional configuration needed for this fixture
     )
 
-    db.add(mcp_config)
-    await db.commit()
-    print(f"Created MCP config with URL: {mcp_url} for test user")
+    mcp_config = await create_mcp_config(db, mcp_config_in, user, fetch_tools=False)
 
+    return mcp_config
+
+
+async def create_mcp_tool_fixtures(db: AsyncSession, mcp_config: MCPConfig) -> None:
+    """Create MCP tool fixtures for a given MCP config using the service."""
+    print(f"Creating MCP tool fixtures for config: {mcp_config.name}")
+
+    mcp_tools_data = [
+        {
+            "name": "fetch",
+            "description": None,
+            "inputSchema": {"type": "object", "properties": {"url": {"type": "string"}, "max_length": {"type": "number", "default": 5000}, "start_index": {"type": "number", "default": 0}, "raw": {"type": "boolean", "default": False}}, "required": ["url"], "additionalProperties": False, "$schema": "http://json-schema.org/draft-07/schema#"}
+        }
+    ]
+
+    for tool_data in mcp_tools_data:
+        await create_mcp_tool(
+            db,
+            mcp_config,
+            tool_data["name"],
+            tool_data["description"],
+            tool_data["inputSchema"],
+        )
 
 async def main():
     """Main function to create all fixtures."""
@@ -216,11 +201,13 @@ async def main():
         await create_openai_api_key(db, user)
         
         # Create MCP config fixture
-        await create_mcp_config_fixture(db, user)
+        mcp_config = await create_mcp_config_fixture(db, user)
+
+        await create_mcp_tool_fixtures(db, mcp_config)
 
         # Create example conversation
         await create_example_conversation(db, user)
-    
+
     print("Fixtures creation completed!")
 
 if __name__ == "__main__":
