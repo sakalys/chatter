@@ -7,7 +7,6 @@ import asyncio
 from google import genai
 from openai import AsyncOpenAI # Import AsyncOpenAI
 
-import httpx
 from fastapi import HTTPException, status
 from sse_starlette.sse import EventSourceResponse
 
@@ -33,7 +32,6 @@ async def _generate_google_response(
         messages: List of messages in the conversation
         model: Model to use for generation
         api_key: Decrypted Google API key
-        stream: Whether to stream the response
 
     Returns:
         Response from the Google API
@@ -132,7 +130,6 @@ async def handle_chat_request(
     model: str,
     api_key: ApiKey,
     conversation_id: UUID | None = None,
-    stream: bool = False,
 ) -> Any:
     """
     Handle a chat request.
@@ -144,12 +141,11 @@ async def handle_chat_request(
         user_message: User message
         model: Model to use for generation
         api_key: API key to use for the request
-        stream: Whether to stream the response
         
         Returns:
             Response from the LLM provider or SSE response, including the conversation ID
     """
-    logger.info(f"Handling chat request for user: {user_id}, conversation: {conversation_id}, stream: {stream}") # Log handling request
+    logger.debug(f"Handling chat request for user: {user_id}, conversation: {conversation_id}") # Log handling request
     
     is_new_conversation = conversation_id is None
 
@@ -158,7 +154,7 @@ async def handle_chat_request(
         from app.services.conversation import create_conversation
         conversation = await create_conversation(db, ConversationCreate(), user_id)
         conversation_id = conversation.id
-        logger.info(f"Created new conversation with ID: {conversation_id}") # Log new conversation
+        logger.debug(f"Created new conversation with ID: {conversation_id}") # Log new conversation
     else:
         # Get conversation to ensure it exists and belongs to the user
         conversation = await get_conversation_by_id_and_user_id(db, conversation_id, user_id)
@@ -178,12 +174,12 @@ async def handle_chat_request(
         ),
         conversation_id
     )
-    logger.info(f"Added user message to conversation: {conversation_id}") # Log adding user message
+    logger.debug(f"Added user message to conversation: {conversation_id}") # Log adding user message
     
     # Get all messages in the conversation
     from app.services.conversation import get_messages_by_conversation
     messages = await get_messages_by_conversation(db, conversation_id)
-    logger.info(f"Retrieved {len(messages)} messages for conversation: {conversation_id}") # Log retrieving messages
+    logger.debug(f"Retrieved {len(messages)} messages for conversation: {conversation_id}") # Log retrieving messages
 
     # Format messages for the provider
     formatted_messages = []
@@ -194,10 +190,10 @@ async def handle_chat_request(
         })
 
     try:
-        logger.info("Calling generate_chat_response") # Log before calling generation
+        logger.debug("Calling generate_chat_response") # Log before calling generation
         # Decrypt the API key before passing it to generate_chat_response
         decrypted_key = decrypt_api_key(api_key.key_reference)
-        logger.info(f"Decrypted API key (first 5 chars): {decrypted_key[:5]}...") # Log first 5 chars of decrypted key
+        logger.debug(f"Decrypted API key (first 5 chars): {decrypted_key[:5]}...") # Log first 5 chars of decrypted key
         
         # Generate response - pass the formatted messages list
         response = await generate_chat_response(
@@ -206,18 +202,17 @@ async def handle_chat_request(
             api_key=decrypted_key,  # Pass the decrypted key directly
             provider=api_key.provider,  # Pass the provider separately
         )
-        logger.info(f"Finished generate_chat_response. Response type: {type(response)}") # Log after calling generation and response type
+        logger.debug(f"Finished generate_chat_response. Response type: {type(response)}") # Log after calling generation and response type
             
         async def event_generator():
             # If it's a new conversation, send an initial event with the conversation ID
+
             if is_new_conversation:
-                logger.info(f"Sending initial conversation_id event: {conversation_id}")
+                logger.debug(f"Sending initial conversation_id event: {conversation_id}")
                 yield {
                     "event": "conversation_created",
                     "data": str(conversation_id)
                 }
-                # Add a small delay to ensure the event is sent before the stream starts
-                await asyncio.sleep(0.01) 
 
             content = ""
             async for chunk in response:
@@ -251,7 +246,7 @@ async def handle_chat_request(
                     model=model
                 )
                 if generated_title:
-                    logger.info(f"Sending conversation_title_updated event: {generated_title}")
+                    logger.debug(f"Sending conversation_title_updated event: {generated_title}")
                     yield {
                         "event": "conversation_title_updated",
                         "data": generated_title
@@ -286,7 +281,7 @@ async def generate_and_set_conversation_title(
     Generates a title for the conversation based on the initial message and response,
     updates the conversation in the database, and sends an SSE event to the frontend.
     """
-    logger.info(f"Generating title for conversation: {conversation_id}")
+    logger.debug(f"Generating title for conversation: {conversation_id}")
 
     # Construct prompt for title generation
     prompt = f"Generate a short, concise title (under 10 words) for the following conversation based on the user's initial message and the assistant's response:\n\nUser: {user_message}\nAssistant: {assistant_message}\n\nTitle:"

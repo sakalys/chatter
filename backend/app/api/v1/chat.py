@@ -1,5 +1,5 @@
 import logging # Import logging
-from typing import Annotated, Any
+from typing import Annotated, Any, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body # Import Query and Body
@@ -8,11 +8,19 @@ from app.core.dependencies import DB, get_current_user
 from app.models.user import User
 from app.services.api_key import get_api_key_by_id
 from app.services.chat import handle_chat_request
-from app.schemas.chat import ChatCompletionRequest
+from pydantic import BaseModel
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__) # Get logger
+
+
+class ChatCompletionRequest(BaseModel):
+    conversation_id: Optional[UUID] = None
+    message: str
+    model: str
+    api_key_id: str
+
 
 @router.api_route("/generate", methods=["GET", "POST"], response_model=dict[str, Any])
 async def generate_chat_response(
@@ -24,12 +32,12 @@ async def generate_chat_response(
     Generate a chat response.
     
     Args:
-        request: The request body containing message, model, api_key_id, conversation_id, and stream.
+        request: The request body.
         
     Returns:
         Response from the LLM provider or SSE response
     """
-    logger.info(f"Received chat generation request: {request}") # Log request
+    logger.debug(f"Received chat generation request: {request}") # Log request
 
     # Convert api_key_id string to UUID
     try:
@@ -50,8 +58,8 @@ async def generate_chat_response(
             detail="API key not found",
         )
     
-    logger.info("Calling handle_chat_request") # Log before calling service
-    # Handle chat request
+    logger.debug("Calling handle_chat_request") # Log before calling service
+
     response = await handle_chat_request(
         db=db,
         user_id=current_user.id, # Pass user_id to service
@@ -59,9 +67,8 @@ async def generate_chat_response(
         user_message=request.message,
         model=request.model,
         api_key=api_key,
-        stream=request.stream,
     )
-    logger.info("Finished handle_chat_request") # Log after calling service
+    logger.debug("Finished handle_chat_request") # Log after calling service
     
     return response
 
