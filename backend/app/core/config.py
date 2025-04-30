@@ -1,7 +1,9 @@
 from pydantic import BaseModel, Field, validator
 from pydantic import ConfigDict
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class Settings(BaseModel):
     """Application settings."""
@@ -29,7 +31,7 @@ class Settings(BaseModel):
     access_token_expire_minutes: int = Field(default=30)
     
     # Database
-    database_url: str = Field(default="postgresql+asyncpg://chatuser:chatpassword@db:5432/chatdb")
+    database_url: str = Field(default=os.getenv("DATABASE_URL"))
     
     # Redis
     redis_url: str = Field(default="redis://redis:6379/0")
@@ -51,7 +53,7 @@ class Settings(BaseModel):
         # Override with environment variables if they exist
         self.aws_region = os.getenv("AWS_REGION", self.aws_region)
         self.aws_endpoint_url = os.getenv("AWS_ENDPOINT_URL", self.aws_endpoint_url)
-        self.aws_kms_key_id = os.getenv("AWS_KMS_KEY_ID", self.aws_kms_key_id)
+        self.aws_kms_key_id = 'alias/chat-api-keys'
         self.aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID", self.aws_access_key_id)
         self.aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY", self.aws_secret_access_key)
 

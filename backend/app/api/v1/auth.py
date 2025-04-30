@@ -126,9 +126,8 @@ async def test_login(
     """
     Development endpoint to get an access token for a test user.
     """
-    test_mode_enabled = os.getenv("TEST_MODE_ENABLED") == "true"
-    print(f"Test mode enabled (os.getenv): {os.getenv('TEST_MODE_ENABLED')}")
-    print(f"Test mode enabled (boolean check): {test_mode_enabled}")
+    test_mode_enabled = os.getenv("ENV") == "development"
+    print(f"Test mode enabled: {test_mode_enabled}")  # Added logging for test mode
 
     if not test_mode_enabled:
         raise HTTPException(

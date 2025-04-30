@@ -1,5 +1,6 @@
 import asyncio
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -17,9 +18,15 @@ from app.models import message # noqa: F401
 from app.models import user # noqa: F401
 
 
+# load env from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL'))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

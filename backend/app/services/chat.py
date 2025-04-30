@@ -1,11 +1,8 @@
 from datetime import datetime
-import logging # Import logging
 import json
-from typing import Any, AsyncGenerator
+import logging
+from typing import Any, AsyncGenerator, Literal, Union
 from uuid import UUID
-import asyncio
-from app.models.mcp_config import MCPConfig
-from app.models.mcp_tool import Tool
 from google import genai
 from google.genai import types
 from openai import AsyncOpenAI # Import AsyncOpenAI
@@ -15,6 +12,8 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
+from app.models.mcp_config import MCPConfig
+from app.models.mcp_tool import Tool
 from app.models.message import Message
 from app.schemas.message import MessageCreate
 from app.models.user import User # Import User model
@@ -24,12 +23,27 @@ from app.schemas.conversation import ConversationCreate, ConversationUpdate
 
 logger = logging.getLogger(__name__) # Get logger
 
+class StreamEvent:
+    """
+    Class to represent a streaming event.
+    """
+    event: str
+    data: str
+
+    def __init__(self, event: Union[Literal["text"], Literal["function_call"]], data: str):
+        self.event = event
+        self.data = data
+
+    def __str__(self):
+        return f"Event: {self.event}, Data: {self.data}"
+
+
 async def _generate_google_response(
     messages: list[dict[str, str]],
     model: str,
     api_key: str,
     mcp_tools: list[Tool],
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[StreamEvent, None]:
     """
     Generate a chat response from the Google API.
 
@@ -46,6 +60,7 @@ async def _generate_google_response(
         types.Tool(
             function_declarations=[
                 {
+                    # "id": str(tool.id), # does not work
                     "name": tool.name,
                     "description": tool.description,
                     "parameters": {
@@ -58,7 +73,7 @@ async def _generate_google_response(
         )
         for tool in mcp_tools
     ]
-    
+
     # Format messages for Google's API
     formatted_messages = []
     for msg in messages:
@@ -83,6 +98,20 @@ async def _generate_google_response(
             "tools": tools,
         },
     ):
+        print(chunk.candidates[0])
+        if chunk.candidates[0].content.parts[0].function_call:
+            function_call = chunk.candidates[0].content.parts[0].function_call
+            print('function_call', function_call)
+            yield "Function call: " + json.dumps(function_call.model_dump())
+            continue
+            # # Call the MCP server with the predicted tool
+            # result = await session.call_tool(
+            #     function_call.name, arguments=function_call.args
+            # )
+            # print(result.content[0].text)
+            # Continue as shown in step 4 of "How Function Calling Works"
+            # and create a user friendly response
+
         yield chunk.text
 
     return
@@ -91,9 +120,10 @@ async def _generate_openai_response(
     messages: list[dict[str, str]],
     model: str,
     api_key: str,
-) -> AsyncGenerator[str, None]:
+    mcp_tools: list[Tool],
+) -> AsyncGenerator[StreamEvent, None]:
     """
-    Generate a chat response from the OpenAI API using the SDK.
+    Generate a chat response from the OpenAI API using the SDK, including tool definitions.
 
     Args:
         messages: List of messages in the conversation
@@ -103,18 +133,35 @@ async def _generate_openai_response(
     Returns:
         Streaming response from the OpenAI API
     """
+    # Convert MCP tools to OpenAI tools format
+    tools = []
+    for tool in mcp_tools:
+        openai_tool = {
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": {
+                    k: v
+                    for k, v in tool.inputSchema.items()
+                    if k not in ["additionalProperties", "$schema"]
+                },
+            },
+        }
+        tools.append(openai_tool)
+
     client = AsyncOpenAI(api_key=api_key)
 
     stream = await client.chat.completions.create(
         model=model,
         messages=messages,
         stream=True,
+        tools=tools, # Pass the formatted tools
     )
 
     async for chunk in stream:
         if chunk.choices and chunk.choices[0].delta.content is not None:
             yield chunk.choices[0].delta.content
-
 
 async def generate_chat_response(
     user: User, # Added user parameter
@@ -122,7 +169,7 @@ async def generate_chat_response(
     model: str,
     api_key: str,  # Changed to expect decrypted key string
     provider: str,  # Added provider parameter
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[StreamEvent, None]:
     """
     Generate a chat response from an LLM provider.
     
@@ -148,7 +195,7 @@ async def generate_chat_response(
         response = _generate_google_response(messages, model, api_key, all_mcp_tools)
         return response
     elif provider == "openai":
-        response = _generate_openai_response(messages, model, api_key)
+        response = _generate_openai_response(messages, model, api_key, all_mcp_tools) # Pass mcp_tools to OpenAI function
         return response
 
     raise HTTPException(
