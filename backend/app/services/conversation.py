@@ -1,5 +1,9 @@
+from json import tool
+from typing import Optional
 from uuid import UUID
 
+from app.models.mcp_tool import MCPTool
+from app.models.mcp_tool_use import MCPToolUse
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -170,7 +174,11 @@ async def delete_conversation(
 
 
 async def add_message_to_conversation(
-    db: AsyncSession, message_in: MessageCreate, conversation_id: UUID
+    db: AsyncSession,
+    message_in: MessageCreate,
+    conversation: Conversation,
+    mcp_tool: Optional[MCPTool] = None
+
 ) -> Message:
     """
     Add a message to a conversation.
@@ -184,20 +192,31 @@ async def add_message_to_conversation(
         Created message object
     """
     message = Message(
-        conversation_id=conversation_id,
         role=message_in.role,
         content=message_in.content,
         model=message_in.model,
         meta=message_in.meta,
+        conversation=conversation,
     )
     db.add(message)
+
+    if (message_in.tool_use):
+        tool_use = MCPToolUse(
+            name=message_in.tool_use.name,
+            args=message_in.tool_use.args,
+            tool=mcp_tool,
+        )
+        message.mcp_tool_use = tool_use
+        db.add(tool_use)
+
     await db.commit()
     await db.refresh(message)
     return message
 
 
 async def get_messages_by_conversation(
-    db: AsyncSession, conversation_id: UUID
+    db: AsyncSession,
+    conversation_id: UUID,
 ) -> list[Message]:
     """
     Get all messages for a conversation.

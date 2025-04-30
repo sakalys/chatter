@@ -1,12 +1,12 @@
 import uuid
 
+from app.models.mcp_tool import MCPTool
+from app.models.message import Message
 from sqlalchemy import Column, ForeignKey, String, Boolean, types
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-from app.models.mcp_tool import MCPTool
-
 
 class MCPToolUse(Base):
     """Model for storing instances of MCP tool usage within messages."""
@@ -21,4 +21,5 @@ class MCPToolUse(Base):
     approved = Column(Boolean, default=False, nullable=False)
 
     # Relationships
-    message = relationship("Message", back_populates="mcp_tool_use")
+    message = relationship(Message, back_populates="mcp_tool_use")
+    tool = relationship(MCPTool, uselist=False)

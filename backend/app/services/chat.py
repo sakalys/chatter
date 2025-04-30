@@ -1,3 +1,4 @@
+from asyncio import constants
 from datetime import datetime
 import json
 import logging
@@ -16,7 +17,7 @@ from app.models.conversation import Conversation
 from app.models.mcp_config import MCPConfig
 from app.models.mcp_tool import MCPTool
 from app.models.message import Message
-from app.schemas.message import MessageCreate
+from app.schemas.message import MessageCreate, ToolUseCreate
 from app.models.user import User # Import User model
 from app.services.api_key import decrypt_api_key
 from app.services.conversation import add_message_to_conversation, get_conversation_by_id, get_conversation_by_id_and_user_id, update_conversation
@@ -246,20 +247,20 @@ async def handle_chat_request(
             )
 
     # Add user message to conversation
-    user_message_obj = await add_message_to_conversation(
+    await add_message_to_conversation(
         db,
         MessageCreate(
             role="user",
             content=user_message,
         ),
-        conversation_id
+        conversation
     )
-    logger.debug(f"Added user message to conversation: {conversation_id}") # Log adding user message
+    logger.debug(f"Added user message to conversation: {conversation.id}") # Log adding user message
     
     # Get all messages in the conversation
     from app.services.conversation import get_messages_by_conversation
-    messages = await get_messages_by_conversation(db, conversation_id)
-    logger.debug(f"Retrieved {len(messages)} messages for conversation: {conversation_id}") # Log retrieving messages
+    messages = await get_messages_by_conversation(db, conversation.id)
+    logger.debug(f"Retrieved {len(messages)} messages for conversation: {conversation.id}") # Log retrieving messages
 
     # Format messages for the provider
     formatted_messages = []
@@ -289,10 +290,10 @@ async def handle_chat_request(
             # If it's a new conversation, send an initial event with the conversation ID
 
             if is_new_conversation:
-                logger.debug(f"Sending initial conversation_id event: {conversation_id}")
+                logger.debug(f"Sending initial conversation_id event: {conversation.id}")
                 yield {
                     "event": "conversation_created",
-                    "data": str(conversation_id)
+                    "data": str(conversation.id)
                 }
 
             tool_calls = []
@@ -304,6 +305,7 @@ async def handle_chat_request(
                     logger.debug(f"Function call event: {event.data}")
                     data = json.loads(event.data)
                     tool_calls.append(data)
+
                     yield {
                         "event": "function_call",
                         "data": event.data
@@ -326,17 +328,50 @@ async def handle_chat_request(
                     role="assistant",
                     content=content,
                     model=model,
-                    metadata={"provider": api_key.provider},
+                    meta={"provider": api_key.provider},
                 ),
-                conversation_id
+                conversation
             )
+
+            for tool_call in tool_calls:
+                # fetch the user's MCP tool from db
+                # the mcp config must belong to the user
+                # and the tool must belong to the mcp config
+                mcp_tool: MCPTool | None = None
+                for config in await user.awaitable_attrs.mcp_configs:
+                    for tool in await config.awaitable_attrs.tools:
+                        if tool.name == tool_call["name"]:
+                            mcp_tool = tool
+                            break
+                    if mcp_tool:
+                        break
+
+                if not mcp_tool:
+                    logger.error(f"MCP Tool not found for function call: {tool_call}")
+                    continue
+
+                await add_message_to_conversation(
+                    db,
+                    MessageCreate(
+                        role="function_call",
+                        content=json.dumps({"name": tool_call["name"], "arguments": tool_call["args"]}),
+                        model=model,
+                        meta={"provider": api_key.provider},
+                        tool_use=ToolUseCreate(
+                            name=tool_call["name"],
+                            args=tool_call["args"],
+                        )
+                    ),
+                    conversation,
+                    mcp_tool,
+                )
 
             # Generate and set conversation title after the first response
             if is_new_conversation and content:
                 generated_title = await generate_and_set_conversation_title(
                     db=db,
                     user=user,
-                    conversation_id=conversation_id,
+                    conversation_id=conversation.id,
                     user_message=user_message,
                     assistant_message=content,
                     api_key=decrypted_key,

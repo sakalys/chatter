@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 import uuid
 
-from app.models.mcp_tool_use import MCPToolUse
 from sqlalchemy import Column, DateTime, ForeignKey, String, Text, types
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -24,4 +23,4 @@ class Message(Base):
 
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
-    mcp_tool_use = relationship(MCPToolUse, back_populates="message", uselist=False, cascade="all, delete-orphan")
+    mcp_tool_use = relationship("MCPToolUse", back_populates="message", uselist=False, cascade="all, delete-orphan")
