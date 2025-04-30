@@ -5,23 +5,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-from typing import Any
-
-
-class Tool(Base):
-    """Model for storing MCP tools."""
-
-    __tablename__ = "mcp_tools"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    mcp_config_id = Column(UUID(as_uuid=True), ForeignKey("mcp_configs.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    inputSchema = Column(types.JSON, nullable=False)
-
-    # Relationships
-    mcp_config = relationship("MCPConfig", back_populates="tools")
-
 
 class MCPConfig(Base):
     """Model for storing user MCP configurations."""

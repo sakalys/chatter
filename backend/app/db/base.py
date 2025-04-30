@@ -4,17 +4,11 @@ from typing import Any
 
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import as_declarative, declared_attr
+from sqlalchemy.orm import as_declarative, DeclarativeBase
+from sqlalchemy.ext.asyncio import AsyncAttrs
 
 
 @as_declarative()
-class Base:
+class Base(AsyncAttrs):
     """Base class for all database models."""
-
-    # Common columns for all models
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    # Generate __tablename__ automatically based on class name
-    @declared_attr
-    def __tablename__(self) -> str:
-        return self.__name__.lower()
+    pass

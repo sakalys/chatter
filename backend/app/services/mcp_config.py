@@ -1,10 +1,11 @@
 from uuid import UUID
 
+from app.models.mcp_tool import Tool
 from app.models.user import User
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.mcp_config import MCPConfig, Tool
+from app.models.mcp_config import MCPConfig
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
 
 from mcp import ClientSession

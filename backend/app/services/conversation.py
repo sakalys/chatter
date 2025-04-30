@@ -105,7 +105,9 @@ async def get_conversation_with_messages(
 
 
 async def create_conversation(
-    db: AsyncSession, conversation_in: ConversationCreate, user_id: UUID
+    db: AsyncSession,
+    conversation_in: ConversationCreate,
+    user_id: UUID,
 ) -> Conversation:
     """
     Create a new conversation.

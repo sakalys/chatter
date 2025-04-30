@@ -62,7 +62,7 @@ async def generate_chat_response(
 
     response = await handle_chat_request(
         db=db,
-        user_id=current_user.id, # Pass user_id to service
+        user=current_user,
         conversation_id=request.conversation_id,
         user_message=request.message,
         model=request.model,

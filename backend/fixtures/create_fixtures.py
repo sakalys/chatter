@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.message import Message
-from app.models.mcp_config import MCPConfig, Tool
+from app.models.mcp_config import MCPConfig
 from app.schemas.user import UserCreate
 from app.services.user import create_user, get_user_by_email
 from app.services.api_key import create_api_key

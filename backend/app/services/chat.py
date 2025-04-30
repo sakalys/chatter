@@ -4,7 +4,10 @@ import json
 from typing import Any, AsyncGenerator
 from uuid import UUID
 import asyncio
+from app.models.mcp_config import MCPConfig
+from app.models.mcp_tool import Tool
 from google import genai
+from google.genai import types
 from openai import AsyncOpenAI # Import AsyncOpenAI
 
 from fastapi import HTTPException, status
@@ -14,6 +17,7 @@ from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.schemas.message import MessageCreate
+from app.models.user import User # Import User model
 from app.services.api_key import decrypt_api_key
 from app.services.conversation import add_message_to_conversation, get_conversation_by_id, get_conversation_by_id_and_user_id, update_conversation
 from app.schemas.conversation import ConversationCreate, ConversationUpdate
@@ -24,6 +28,7 @@ async def _generate_google_response(
     messages: list[dict[str, str]],
     model: str,
     api_key: str,
+    mcp_tools: list[Tool],
 ) -> AsyncGenerator[str, None]:
     """
     Generate a chat response from the Google API.
@@ -36,6 +41,23 @@ async def _generate_google_response(
     Returns:
         Response from the Google API
     """
+
+    tools: list[types.Tool] = [
+        types.Tool(
+            function_declarations=[
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": {
+                        k: v
+                        for k, v in tool.inputSchema.items()
+                        if k not in ["additionalProperties", "$schema"]
+                    },
+                }
+            ]
+        )
+        for tool in mcp_tools
+    ]
     
     # Format messages for Google's API
     formatted_messages = []
@@ -57,6 +79,9 @@ async def _generate_google_response(
         # model="gemini-2.0-flash-001",
         model=model,
         contents=formatted_messages,
+        config={
+            "tools": tools,
+        },
     ):
         yield chunk.text
 
@@ -92,6 +117,7 @@ async def _generate_openai_response(
 
 
 async def generate_chat_response(
+    user: User, # Added user parameter
     messages: list[dict[str, str]], # Changed type hint to match _generate functions
     model: str,
     api_key: str,  # Changed to expect decrypted key string
@@ -111,8 +137,15 @@ async def generate_chat_response(
         Response from the LLM provider or streaming response object
     """
     
+    all_mcp_tools: list[Tool] = []
+
+    configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
+
+    for config in configs:
+        all_mcp_tools.extend(await config.awaitable_attrs.tools)
+
     if provider == "google":
-        response = _generate_google_response(messages, model, api_key)
+        response = _generate_google_response(messages, model, api_key, all_mcp_tools)
         return response
     elif provider == "openai":
         response = _generate_openai_response(messages, model, api_key)
@@ -125,7 +158,7 @@ async def generate_chat_response(
 
 async def handle_chat_request(
     db,
-    user_id: UUID,
+    user: User,
     user_message: str,
     model: str,
     api_key: ApiKey,
@@ -145,19 +178,19 @@ async def handle_chat_request(
         Returns:
             Response from the LLM provider or SSE response, including the conversation ID
     """
-    logger.debug(f"Handling chat request for user: {user_id}, conversation: {conversation_id}") # Log handling request
+    logger.debug(f"Handling chat request for user: {user.id}, conversation: {conversation_id}") # Log handling request
     
     is_new_conversation = conversation_id is None
 
     # If no conversation_id is provided, create a new conversation
     if is_new_conversation:
         from app.services.conversation import create_conversation
-        conversation = await create_conversation(db, ConversationCreate(), user_id)
+        conversation = await create_conversation(db, ConversationCreate(), user.id)
         conversation_id = conversation.id
         logger.debug(f"Created new conversation with ID: {conversation_id}") # Log new conversation
     else:
         # Get conversation to ensure it exists and belongs to the user
-        conversation = await get_conversation_by_id_and_user_id(db, conversation_id, user_id)
+        conversation = await get_conversation_by_id_and_user_id(db, conversation_id, user.id)
         if not conversation:
             logger.error(f"Conversation not found for ID: {conversation_id}") # Log error
             raise HTTPException(
@@ -197,6 +230,7 @@ async def handle_chat_request(
         
         # Generate response - pass the formatted messages list
         response = await generate_chat_response(
+            user=conversation.user, # Pass the user object
             messages=formatted_messages,
             model=model,
             api_key=decrypted_key,  # Pass the decrypted key directly
@@ -222,7 +256,6 @@ async def handle_chat_request(
                     "data": chunk
                 }
 
-            from app.services.conversation import add_message_to_conversation
             await add_message_to_conversation(
                 db,
                 MessageCreate(
@@ -238,6 +271,7 @@ async def handle_chat_request(
             if is_new_conversation and content:
                 generated_title = await generate_and_set_conversation_title(
                     db=db,
+                    user=user,
                     conversation_id=conversation_id,
                     user_message=user_message,
                     assistant_message=content,
@@ -270,6 +304,7 @@ async def handle_chat_request(
 
 async def generate_and_set_conversation_title(
     db,
+    user: User,
     conversation_id: UUID,
     user_message: str,
     assistant_message: str,
@@ -289,6 +324,7 @@ async def generate_and_set_conversation_title(
     title = ''
     try:
         generator = await generate_chat_response(
+            user,
             messages=[
                 {"role": "user", "content": prompt}
             ],
