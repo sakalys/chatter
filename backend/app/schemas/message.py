@@ -22,8 +22,7 @@ class MessageBase(BaseModel):
 
 class MessageCreate(MessageBase):
     """Message creation schema."""
-    pass
-    tool_use: ToolUseCreate | None = Field(None, description="Tool use information")
+    tool_use: Annotated[Optional[ToolUseCreate], Field(None, description="Tool use information")] = None
 
 
 class MessageResponse(MessageBase):

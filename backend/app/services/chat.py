@@ -371,7 +371,7 @@ async def handle_chat_request(
                 generated_title = await generate_and_set_conversation_title(
                     db=db,
                     user=user,
-                    conversation_id=conversation.id,
+                    conversation=conversation,
                     user_message=user_message,
                     assistant_message=content,
                     api_key=decrypted_key,
@@ -404,7 +404,7 @@ async def handle_chat_request(
 async def generate_and_set_conversation_title(
     db,
     user: User,
-    conversation_id: UUID,
+    conversation: Conversation,
     user_message: str,
     assistant_message: str,
     api_key: str,
@@ -415,7 +415,7 @@ async def generate_and_set_conversation_title(
     Generates a title for the conversation based on the initial message and response,
     updates the conversation in the database, and sends an SSE event to the frontend.
     """
-    logger.debug(f"Generating title for conversation: {conversation_id}")
+    logger.debug(f"Generating title for conversation: {conversation.id}")
 
     # Construct prompt for title generation
     prompt = f"Generate a short, concise title (under 10 words) for the following conversation based on the user's initial message and the assistant's response:\n\nUser: {user_message}\nAssistant: {assistant_message}\n\nTitle:"
@@ -433,15 +433,10 @@ async def generate_and_set_conversation_title(
         )
 
         async for title_part in generator:
-            title += title_part
+            title += title_part.data
 
         if title:
-            # Update the conversation in the database
-            conversation = await get_conversation_by_id(db, conversation_id) # User ID is not needed for internal update
-            if conversation:
-                await update_conversation(db, conversation, ConversationUpdate(title=title))
-            else:
-                logger.error(f"Conversation not found for ID: {conversation_id}")
+            await update_conversation(db, conversation, ConversationUpdate(title=title))
 
     except Exception as e:
         logger.error(f"Error generating or setting conversation title: {e}", exc_info=True)

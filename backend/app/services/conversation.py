@@ -135,7 +135,9 @@ async def create_conversation(
 
 
 async def update_conversation(
-    db: AsyncSession, conversation: Conversation, conversation_in: ConversationUpdate
+    db: AsyncSession,
+    conversation: Conversation,
+    conversation_in: ConversationUpdate,
 ) -> Conversation:
     """
     Update a conversation.
