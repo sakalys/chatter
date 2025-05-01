@@ -138,7 +138,7 @@ def encrypt_api_key(api_key: str) -> str:
         Encrypted API key reference
     """
     try:
-        logger.info(f"Attempting to encrypt API key using KMS key: {settings.aws_kms_key_id}")
+        logger.debug(f"Attempting to encrypt API key using KMS key: {settings.aws_kms_key_id}")
         # Create KMS client
         kms = boto3.client(
             'kms',
@@ -158,7 +158,7 @@ def encrypt_api_key(api_key: str) -> str:
         encrypted_key = base64.b64encode(response['CiphertextBlob']).decode('utf-8')
         
         # Log the first few characters for debugging
-        logger.info(f"Successfully encrypted API key (first 5 chars): {encrypted_key[:5]}...")
+        logger.debug(f"Successfully encrypted API key (first 5 chars): {encrypted_key[:5]}...")
         
         return encrypted_key
     except Exception as e:

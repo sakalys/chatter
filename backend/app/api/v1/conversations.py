@@ -26,7 +26,7 @@ from app.services.conversation import (
 router = APIRouter()
 
 
-@router.get("/", response_model=list[ConversationResponse])
+@router.get("", response_model=list[ConversationResponse])
 async def read_conversations(
     current_user: Annotated[User, Depends(get_current_user)],
     db: DB,
