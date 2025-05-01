@@ -48,7 +48,7 @@ const LoginPage: React.FC = () => {
     mutationFn: googleLogin,
     onSuccess: (data) => {
       console.log('Backend authentication successful:', data);
-      localStorage.setItem('authToken', data.access_token);
+      auth.login(data.access_token);
       navigate('/');
     },
     onError: (error) => {
