@@ -98,7 +98,9 @@ export function ChatInterface({ }: ChatInterfaceProps) {
       model: selectedModel.id,
       content,
     };
-    setOutgoingMessage(userMessage);
+    if (toolDecision === null) {
+      setOutgoingMessage(userMessage);
+    }
     setIncomingMessage({ message: '', model: selectedModel });
     setIsLoading(true);
 
@@ -251,18 +253,27 @@ export function ChatInterface({ }: ChatInterfaceProps) {
     handleSendMessage('', toolDecide);
   };
 
-  return (
-    <div className="flex flex-col h-full relative">
-      {/* Header with Conversation Title and LLM Selector */}
-      <div className="p-4 flex shrink-0 items-center justify-between border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-800">{conversationTitle}</h2>
-      </div>
+  const debug = false;
 
-      <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
-        <div>
-          {messages.map((message) => (
-            <ChatMessage
-              id={message.id}
+  return (
+    <div className="flex h-full relative"> {/* Modified main container to be a flex container */}
+      {debug && (
+      <div className="w-[600px] overflow-y-auto"> {/* Added sidebar div */}
+        <h3 className="text-lg font-semibold mb-2">Debug Messages</h3>
+        {messages.map((message, index) => (
+          <div key={index} className="text-xs break-all mb-1 even:bg-zinc-50 p-4"> {/* Display message content */}
+            <strong>{message.role}:</strong> {message.content}
+          </div>
+        ))}
+      </div>
+      )}
+
+      <div className="flex flex-col flex-1 h-full"> {/* Main chat content container */}
+        <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
+          <div>
+            {messages.map((message) => (
+              <ChatMessage
+                id={message.id}
               key={message.id}
               role={message.role}
               content={message.content}
@@ -300,6 +311,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
       />
+    </div>
     </div>
   );
 }

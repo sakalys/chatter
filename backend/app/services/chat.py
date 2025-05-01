@@ -314,7 +314,8 @@ async def handle_chat_request(
                 await session.initialize()
 
                 result = await session.call_tool(
-                    tool_use.name, arguments=tool_use.args
+                    tool_use.name,
+                    arguments=tool_use.args
                 )
 
                 formatted_messages.append({
@@ -372,21 +373,22 @@ async def handle_chat_request(
                 else:
                     logger.warning(f"Unknown event type: {event.event}")
 
-            created = await add_message_to_conversation(
-                db,
-                MessageCreate(
-                    role="assistant",
-                    content=content,
-                    model=model,
-                    meta={"provider": api_key.provider},
-                ),
-                conversation
-            )
+            if content != "":
+                created = await add_message_to_conversation(
+                    db,
+                    MessageCreate(
+                        role="assistant",
+                        content=content,
+                        model=model,
+                        meta={"provider": api_key.provider},
+                    ),
+                    conversation
+                )
 
-            yield {
-                "event": "message_done",
-                "data": MessageResponse.model_validate(created, from_attributes=True).model_dump_json(by_alias=True)
-            }
+                yield {
+                    "event": "message_done",
+                    "data": MessageResponse.model_validate(created, from_attributes=True).model_dump_json(by_alias=True)
+                }
 
             for tool_call in tool_calls:
                 # fetch the user's MCP tool from db
