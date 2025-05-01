@@ -93,7 +93,7 @@ const LoginPage: React.FC = () => {
 
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black p-6">
+    <div className="flex items-center justify-center min-h-full bg-gradient-to-br from-gray-900 to-black p-6">
       <div className="relative px-8 py-10 bg-gray-800 bg-opacity-70 backdrop-filter backdrop-blur-lg shadow-2xl rounded-xl w-full max-w-md border border-gray-700">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-extrabold text-white mb-3 tracking-tight">Moo Point</h1>

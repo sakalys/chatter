@@ -10,7 +10,6 @@ import { ChatInterface } from './components/chat/ChatInterface.tsx';
 import { ToastContainer } from 'react-toastify';
 import LoadingSpinner from './components/ui/LoadingSpinner.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
-import { NewConversationProvider } from './context/NewConversationContext.tsx';
 
 const googleClientId = '181853076785-uf93784hrobvqqfrgftek08hd5n03m25.apps.googleusercontent.com';
 
@@ -68,11 +67,25 @@ export const AnonymousOnly = () => {
   </>
 };
 
+const TopMostWrapper = () => {
+  return (
+    <div className="flex flex-col h-screen">
+      <div className="bg-yellow-200 text-yellow-800 text-center p-2">
+        We're actively improving the site daily! You might encounter some unexpected behavior. Please bear with us and report any issues <a href="#" className="underline">here</a>.
+      </div>
+
+      <div className="flex-1 overflow-y-auto relative">
+        <Outlet/>
+      </div>
+    </div>
+  );
+}
 
 
 const router = createBrowserRouter([
   {
       path: '/',
+      element: <TopMostWrapper/>,
       children: [
           {
               path: '/',
@@ -140,9 +153,6 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* Banner */}
-    <div className="bg-yellow-200 text-yellow-800 text-center p-2">
-      We're actively improving the site daily! You might encounter some unexpected behavior. Please bear with us and report any issues <a href="#" className="underline">here</a>.
-    </div>
     <GoogleOAuthProvider clientId={googleClientId}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>

@@ -24,7 +24,7 @@ export function MainLayout({ children }: PropsWithChildren) {
 
   return (
     <NewConversationContext.Provider value={{ newChatState, setNewChatState, refetchConversations: refetch }}>
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-full bg-gray-100">
       <LlmProvider>
           {/* Sidebar */}
           <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
