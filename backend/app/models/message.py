@@ -18,7 +18,6 @@ class Message(Base):
     __tablename__ = "messages"
     
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
     role: Mapped[str] = mapped_column(nullable=False)  # "user", "assistant", "system", etc.
     content: Mapped[str] = mapped_column(Text, nullable=False)
     model: Mapped[str | None] = mapped_column(nullable=True)  # The model used for this message (if assistant)
@@ -27,4 +26,5 @@ class Message(Base):
 
     # Relationships
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
+    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), index=True, nullable=False)
     mcp_tool_use: Mapped["MCPToolUse | None"] = relationship(back_populates="message", uselist=False, cascade="all, delete-orphan")

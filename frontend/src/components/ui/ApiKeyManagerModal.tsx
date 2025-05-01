@@ -20,7 +20,7 @@ const fetchApiKeys = async (): Promise<ApiKey[]> => {
     throw new Error('Authentication token not found');
   }
 
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/api-keys/`, {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/api-keys`, {
     headers: {
       'Authorization': `Bearer ${authToken}`,
     },
@@ -42,7 +42,7 @@ const saveApiKey = async (keyData: ApiKey): Promise<ApiKey> => {
 
   const url = keyData.id
     ? `${import.meta.env.VITE_API_URL}/api/v1/api-keys/${keyData.id}`
-    : `${import.meta.env.VITE_API_URL}/api/v1/api-keys/`;
+    : `${import.meta.env.VITE_API_URL}/api/v1/api-keys`;
 
   const method = keyData.id ? 'PUT' : 'POST';
 

@@ -20,7 +20,7 @@ const fetchMessages = async (conversationId: string | undefined): Promise<Messag
 };
 
 const fetchApiKeys = async (): Promise<ApiKey[]> => {
-  return apiFetch<ApiKey[]>('GET', '/api-keys/');
+  return apiFetch<ApiKey[]>('GET', '/api-keys');
 };
 
 

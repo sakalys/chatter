@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr
@@ -14,6 +15,7 @@ class UserBase(BaseModel):
 # Properties to receive via API on creation
 # Properties to receive via API on creation
 class UserCreate(UserBase):
+    id: Optional[str]
     email: EmailStr
     password: str | None = None # Make password optional for OAuth users
 
@@ -27,13 +29,9 @@ class UserUpdate(UserBase):
 class UserResponse(UserBase):
     id: UUID
     email: EmailStr
-    
-    model_config = ConfigDict(from_attributes=True)
 
 
 # Properties stored in DB
 class UserInDB(UserBase):
     id: UUID
     hashed_password: str
-    
-    model_config = ConfigDict(from_attributes=True)

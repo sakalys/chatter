@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import asyncio
+import json
 import os
 from pathlib import Path
+from typing import Sequence
+import uuid
+from app.models.mcp_tool import MCPTool
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -12,6 +16,7 @@ from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.mcp_config import MCPConfig
+from app.models.mcp_tool_use import MCPToolUse
 from app.schemas.user import UserCreate
 from app.services.user import create_user, get_user_by_email
 from app.services.api_key import create_api_key
@@ -108,12 +113,12 @@ async def create_google_api_key(db: AsyncSession, user: User) -> None:
     await create_api_key(db, api_key_in, user.id)
     print("Created Google API key for test user")
 
-async def create_example_conversation(db: AsyncSession, user: User) -> None:
+async def create_example_conversation(db: AsyncSession, user: User, tool: MCPTool) -> None:
     """Create an example conversation with messages for the test user."""
     print("Creating example conversation...")
     
     # Create a new conversation
-    conversation = Conversation(user=user, title="Example Conversation")
+    conversation = Conversation(id=uuid.UUID("a4a929da-d636-434d-ad5e-35689d31eebb"), user=user, title="Example Conversation")
     db.add(conversation)
     await db.commit()
     await db.refresh(conversation)
@@ -133,11 +138,30 @@ async def create_example_conversation(db: AsyncSession, user: User) -> None:
             conversation=conversation,
             content=msg_data["content"],
             role=msg_data["role"],
+            model="gpt-3.5-turbo",
         )
         db.add(message)
+
+    tool_name = "fetch"
+    tool_args = {"url": "https://sakalys.com"}
+
+    tool_message = Message(
+        conversation=conversation,
+        content=json.dumps({"name": tool_name, "args": tool_args}),
+        role="function_call",
+        model="gpt-3.5-turbo",
+        meta={"provider": "openai"},
+        mcp_tool_use=MCPToolUse(
+            tool=tool,
+            name=tool_name,
+            args=tool_args,
+            approved=False,
+            # message_id and tool_id are nullable, so we can omit them for this basic fixture
+        )
+    )
+    db.add(tool_message)
     
     await db.commit()
-    print(f"Added {len(messages_data)} messages to the conversation.")
 
 async def create_mcp_config_fixture(db: AsyncSession, user: User) -> MCPConfig:
     """Create an MCP config fixture for the test user using the service."""
@@ -156,7 +180,7 @@ async def create_mcp_config_fixture(db: AsyncSession, user: User) -> MCPConfig:
     return mcp_config
 
 
-async def create_mcp_tool_fixtures(db: AsyncSession, mcp_config: MCPConfig) -> None:
+async def create_mcp_tool_fixtures(db: AsyncSession, mcp_config: MCPConfig) -> Sequence[MCPTool]:
     """Create MCP tool fixtures for a given MCP config using the service."""
     print(f"Creating MCP tool fixtures for config: {mcp_config.name}")
 
@@ -168,14 +192,17 @@ async def create_mcp_tool_fixtures(db: AsyncSession, mcp_config: MCPConfig) -> N
         }
     ]
 
+    tools = []
     for tool_data in mcp_tools_data:
-        await create_mcp_tool(
+        tools.append(await create_mcp_tool(
             db,
             mcp_config,
             tool_data["name"],
             tool_data["description"],
             tool_data["inputSchema"],
-        )
+        ))
+
+    return tools
 
 async def main():
     """Main function to create all fixtures."""
@@ -203,10 +230,10 @@ async def main():
         # Create MCP config fixture
         mcp_config = await create_mcp_config_fixture(db, user)
 
-        await create_mcp_tool_fixtures(db, mcp_config)
+        tools = await create_mcp_tool_fixtures(db, mcp_config)
 
         # Create example conversation
-        await create_example_conversation(db, user)
+        await create_example_conversation(db, user, tools[0])
 
     print("Fixtures creation completed!")
 

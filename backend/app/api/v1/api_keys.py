@@ -18,7 +18,7 @@ from app.services.api_key import (
 router = APIRouter()
 
 
-@router.get("/", response_model=list[ApiKeyResponse])
+@router.get("", response_model=list[ApiKeyResponse])
 async def read_api_keys(
     current_user: Annotated[User, Depends(get_current_user)],
     db: DB,
@@ -31,7 +31,7 @@ async def read_api_keys(
     return api_keys
 
 
-@router.post("/", response_model=ApiKeyResponse)
+@router.post("", response_model=ApiKeyResponse)
 async def create_user_api_key(
     api_key_in: ApiKeyCreate,
     current_user: Annotated[User, Depends(get_current_user)],

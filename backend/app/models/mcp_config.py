@@ -16,11 +16,11 @@ class MCPConfig(Base):
     __tablename__ = "mcp_configs"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)  # User-friendly name for the MCP configuration
     url: Mapped[str] = mapped_column(nullable=False)  # MCP URL
     configuration: Mapped[dict] = mapped_column(types.JSON, nullable=True)  # Additional configuration for the MCP
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="mcp_configs")
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     tools: Mapped[list["MCPTool"]] = relationship(back_populates="mcp_config")

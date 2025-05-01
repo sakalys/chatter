@@ -24,12 +24,9 @@ class ConversationResponse(ConversationBase):
     """Conversation response schema."""
     id: UUID
     user_id: UUID
-    
-    model_config = ConfigDict(from_attributes=True)
 
 
 class ConversationDetailResponse(ConversationResponse):
     """Detailed conversation response with messages."""
     messages: list[MessageResponse] = []
     
-    model_config = ConfigDict(from_attributes=True)

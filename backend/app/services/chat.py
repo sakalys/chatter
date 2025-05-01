@@ -11,6 +11,8 @@ from openai import AsyncOpenAI # Import AsyncOpenAI
 
 from fastapi import HTTPException, status
 from sse_starlette.sse import EventSourceResponse
+from mcp import ClientSession
+from mcp.client.sse import sse_client
 
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
@@ -365,6 +367,20 @@ async def handle_chat_request(
                     conversation,
                     mcp_tool,
                 )
+
+                # mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
+
+                # # call the tool
+                # async with sse_client(mcp_config.url) as streams:
+                #     async with ClientSession(*streams) as session:
+                #         await session.initialize()
+
+                #         result = await session.call_tool(
+                #             tool_call["name"], arguments=tool_call["args"]
+                #         )
+
+                #         print(result)
+
 
             # Generate and set conversation title after the first response
             if is_new_conversation and content:

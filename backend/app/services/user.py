@@ -65,6 +65,9 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
         is_active=user_in.is_active,
         is_superuser=user_in.is_superuser,
     )
+    if (user_in.id):
+        user.id = UUID(user_in.id)
+
     db.add(user)
     await db.commit()
     await db.refresh(user)

@@ -17,10 +17,10 @@ class MCPTool(Base):
     __tablename__ = "mcp_tools"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    mcp_config_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("mcp_configs.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[Optional[str]] = mapped_column(nullable=True)
     inputSchema: Mapped[dict[str, Any]] = mapped_column(types.JSON, nullable=False)
 
     # Relationships
     mcp_config: Mapped["MCPConfig"] = relationship(back_populates="tools")
+    mcp_config_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("mcp_configs.id", ondelete="CASCADE"), index=True, nullable=False)

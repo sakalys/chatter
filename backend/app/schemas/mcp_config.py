@@ -27,5 +27,3 @@ class MCPConfigResponse(MCPConfigBase):
     """MCP configuration response schema."""
     id: UUID
     user_id: UUID
-    
-    model_config = ConfigDict(from_attributes=True)
