@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS } from '../../types';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
+import LoadingSpinner from '../ui/LoadingSpinner';
 import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, apiFetchStreaming } from '../../util/api';
@@ -35,6 +36,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   const [incomingMessage, setIncomingMessage] = useState<{ message: string, model: Model } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [showNoModelsOverlay, setShowNoModelsOverlay] = useState(false);
   const [conversationTitle, setConversationTitle] = useState<string>('New Conversation');
   const [selectedModel, setSelectedModel] = useState<Model>(AVAILABLE_MODELS[0]); // Default to the first model
   const { setNewChatState, refetchConversations } = useNewConversation(); // Consume context and setter
@@ -63,7 +65,22 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   }, [fetchedMessages]);
 
   // Get unique providers from API keys
-  const configuredProviders = [...new Set(apiKeys?.map(key => key.provider) || [])];
+  const configuredProviders = useMemo(() => {
+    return [...new Set(apiKeys?.map(key => key.provider) || [])];
+  }, [apiKeys]);
+
+  // Determine if there are any available models based on configured providers
+  const hasAvailableModels = useMemo(() => {
+    return AVAILABLE_MODELS.some(model => configuredProviders.includes(model.provider));
+  }, [configuredProviders]);
+
+  // Effect to show the overlay if no models are available after API keys are loaded
+  useEffect(() => {
+    if (!isLoadingApiKeys) {
+      setShowNoModelsOverlay(!hasAvailableModels);
+    }
+  }, [isLoadingApiKeys, hasAvailableModels]);
+
 
   // Handle model change
   const handleModelChange = (model: Model) => {
@@ -258,17 +275,38 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   return (
     <div className="flex h-full relative"> {/* Modified main container to be a flex container */}
       {debug && (
-      <div className="w-[600px] overflow-y-auto"> {/* Added sidebar div */}
-        <h3 className="text-lg font-semibold mb-2">Debug Messages</h3>
-        {messages.map((message, index) => (
-          <div key={index} className="text-xs break-all mb-1 even:bg-zinc-50 p-4"> {/* Display message content */}
-            <strong>{message.role}:</strong> {message.content}
-          </div>
-        ))}
-      </div>
+        <div className="w-[600px] overflow-y-auto"> {/* Added sidebar div */}
+          <h3 className="text-lg font-semibold mb-2">Debug Messages</h3>
+          {messages.map((message, index) => (
+            <div key={index} className="text-xs break-all mb-1 even:bg-zinc-50 p-4"> {/* Display message content */}
+              <strong>{message.role}:</strong> {message.content}
+            </div>
+          ))}
+        </div>
       )}
 
       <div className="flex flex-col flex-1 h-full"> {/* Main chat content container */}
+        {showNoModelsOverlay && (
+          <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
+            <div className="text-center p-4">
+              <p className="text-lg mb-4">Please configure your API keys to start chatting</p>
+              <button
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                onClick={() => setIsApiKeyModalOpen(true)}
+              >
+                Setup API Keys
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Loading spinner for API keys */}
+        {isLoadingApiKeys && (
+          <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
+            <LoadingSpinner />
+          </div>
+        )}
+
         <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
           <div>
             {messages.map((message) => (
