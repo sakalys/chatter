@@ -2,6 +2,7 @@ from typing import Annotated, Any, Optional
 from uuid import UUID
 
 from app.models.mcp_tool import MCPTool
+from app.models.mcp_tool_use import ToolUseState
 from pydantic import BaseModel, Field
 
 class ToolUseBase(BaseModel):
@@ -14,7 +15,7 @@ class ToolUseCreate(ToolUseBase):
     pass
 
 class ToolUseResponse(ToolUseBase):
-    approved: bool = Field(..., description="Whether the tool use was approved")
+    state: ToolUseState = Field(..., description="Whether the tool use was approved")
 
 class MessageBase(BaseModel):
     """Base message schema."""

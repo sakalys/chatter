@@ -27,4 +27,4 @@ class Message(Base):
     # Relationships
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
     conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), index=True, nullable=False)
-    mcp_tool_use: Mapped["MCPToolUse | None"] = relationship(back_populates="message", uselist=False, cascade="all, delete-orphan")
+    mcp_tool_use: Mapped["MCPToolUse | None"] = relationship(back_populates="message", uselist=False, lazy="joined", cascade="all, delete-orphan")

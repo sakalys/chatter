@@ -16,7 +16,7 @@ from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.mcp_config import MCPConfig
-from app.models.mcp_tool_use import MCPToolUse
+from app.models.mcp_tool_use import MCPToolUse, ToolUseState
 from app.schemas.user import UserCreate
 from app.services.user import create_user, get_user_by_email
 from app.services.api_key import create_api_key
@@ -155,7 +155,7 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
             tool=tool,
             name=tool_name,
             args=tool_args,
-            approved=False,
+            state=ToolUseState.pending,
             # message_id and tool_id are nullable, so we can omit them for this basic fixture
         )
     )
