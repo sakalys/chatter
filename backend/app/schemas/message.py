@@ -15,6 +15,7 @@ class ToolUseCreate(ToolUseBase):
     pass
 
 class ToolUseResponse(ToolUseBase):
+    id: UUID = Field(..., description="Tool use ID")
     state: ToolUseState = Field(..., description="Whether the tool use was approved")
 
 class MessageBase(BaseModel):
