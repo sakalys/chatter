@@ -1,6 +1,15 @@
 export type MessageRole = 'user' | 'assistant' | 'system';
 
 
+export interface MCPToolUse {
+    id: string;
+    name: string;
+    state: 'pending' | 'completed' | 'failed';
+    args: {
+      [key: string]: string | number | boolean | null;
+    }
+  }
+
 export interface Message extends MessageCreate {
   id: string;
   created_at: string; // Add created_at property
@@ -8,6 +17,7 @@ export interface Message extends MessageCreate {
   role: MessageRole;
   content: string;
   model: string;
+  mcp_tool_use: MCPToolUse | null
 }
 
 export interface MessageCreate {

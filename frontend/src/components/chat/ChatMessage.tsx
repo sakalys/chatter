@@ -1,6 +1,8 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Nl2p } from './ChatInterface';
+import { MCPToolUse, Model } from '../../types';
+import { ToolCallMessage } from './ToolCallMessage';
 
 export type MessageRole = 'user' | 'assistant' | 'system' | 'function_call';
 
@@ -10,9 +12,12 @@ interface ChatMessageProps {
   content: string
   timestamp: Date
   model: string
+  toolCall: MCPToolUse | null
+  onDecision: (toolDecide: boolean) => void
+  isGenerating: boolean
 }
 
-export function ChatMessage({ role, content, timestamp, model }: ChatMessageProps) {
+export function ChatMessage({ role, content, timestamp, model, toolCall, onDecision, isGenerating }: ChatMessageProps) {
   const isUser = role === 'user';
   const isFunctionCall = role === 'function_call';
 
@@ -68,10 +73,12 @@ export function ChatMessage({ role, content, timestamp, model }: ChatMessageProp
               <div className="prose prose-sm">
                 {isUser ? (
                   <Nl2p text={content} />
+                ) : toolCall ? (
+                  <ToolCallMessage toolCall={toolCall} onDecision={onDecision} isGenerating={isGenerating}/>
                 ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {content}
-                </ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {content}
+                  </ReactMarkdown>
                 )}
               </div>
             </div>
@@ -82,7 +89,7 @@ export function ChatMessage({ role, content, timestamp, model }: ChatMessageProp
   );
 }
 
-export function IncomingMessage({incomingMessage, model}: {incomingMessage: string, model: string}) {
+export function IncomingMessage({incomingMessage, model}: {incomingMessage: string, model: Model}) {
   return (
     <div className="py-5 bg-gray-50">
       <div className="max-w-4xl mx-auto px-4">
@@ -96,7 +103,7 @@ export function IncomingMessage({incomingMessage, model}: {incomingMessage: stri
           </div>
           <div className="ml-3 flex-1">
             <div className="flex items-center">
-              <p className="text-sm font-medium text-gray-900">{model || 'Assistant'}</p>
+              <p className="text-sm font-medium text-gray-900">{model.name || 'Assistant'}</p>
             </div>
             <div className="mt-1 text-sm text-gray-700">
               <div className="prose prose-sm">

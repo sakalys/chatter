@@ -1,13 +1,13 @@
 import { useState, FormEvent, KeyboardEvent, useEffect } from 'react';
-import { AVAILABLE_MODELS } from '../../types';
+import { AVAILABLE_MODELS, Model } from '../../types';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
-  isLoading?: boolean;
-  selectedModel?: string;
-  onModelChange?: (model: string) => void;
-  apiKeysLoaded?: boolean;
-  configuredProviders?: string[];
+  isLoading: boolean;
+  selectedModel: Model;
+  onModelChange: (model: Model) => void;
+  apiKeysLoaded: boolean;
+  configuredProviders: string[];
 }
 // const defaultMsg = 'hi';
 // const defaultMsg = 'print me 20 paragraphs of random text';
@@ -17,7 +17,7 @@ const defaultMsg = '';
 export function ChatInput({ 
   onSendMessage, 
   isLoading = false,
-  selectedModel = 'gemini-2.5-flash-preview-04-17',
+  selectedModel,
   onModelChange,
   configuredProviders = [],
 }: ChatInputProps) {
@@ -28,8 +28,8 @@ export function ChatInput({
   );
 
   useEffect(() => {
-    if (availableModels.length > 0 && !availableModels.find(m => m.id === selectedModel)) {
-      onModelChange?.(availableModels[0].id);
+    if (availableModels.length > 0 && !availableModels.find(m => m.id === selectedModel.id)) {
+      onModelChange(availableModels[0]);
     }
   }, [configuredProviders, selectedModel, availableModels, onModelChange]);
 
@@ -84,8 +84,10 @@ export function ChatInput({
             <span className="mr-2">Model:</span>
             <select 
               className="border border-gray-300 rounded px-2 py-1 text-sm"
-              value={selectedModel}
-              onChange={(e) => onModelChange && onModelChange(e.target.value)}
+              value={selectedModel.id}
+              onChange={(e) => {
+                onModelChange(availableModels.find(model => model.id === e.target.value) || availableModels[0]);
+              }}
               disabled={availableModels.length === 0}
             >
               {availableModels.length === 0 ? (

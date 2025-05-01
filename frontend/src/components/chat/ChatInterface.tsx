@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import { Message, ApiKey, MessageCreate } from '../../types';
+import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS } from '../../types';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
@@ -32,11 +32,11 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   const [conversationId, setConversationId] = useState<string | undefined>(routeConversationId);
   const [messages, setMessages] = useState<(Message)[]>([]);
   const [outgoingMessage, setOutgoingMessage] = useState<MessageCreate | null>(null);
-  const [incomingMessage, setIncomingMessage] = useState<{ message: string, model: string } | null>(null);
+  const [incomingMessage, setIncomingMessage] = useState<{ message: string, model: Model } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [conversationTitle, setConversationTitle] = useState<string>('New Conversation');
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-preview-04-17');
+  const [selectedModel, setSelectedModel] = useState<Model>(AVAILABLE_MODELS[0]); // Default to the first model
   const { setNewChatState, refetchConversations } = useNewConversation(); // Consume context and setter
 
   // Fetch messages using React Query
@@ -66,8 +66,8 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   const configuredProviders = [...new Set(apiKeys?.map(key => key.provider) || [])];
 
   // Handle model change
-  const handleModelChange = (modelId: string) => {
-    setSelectedModel(modelId);
+  const handleModelChange = (model: Model) => {
+    setSelectedModel(model);
   };
 
   // Update conversationId when route parameter changes
@@ -80,10 +80,10 @@ export function ChatInterface({ }: ChatInterfaceProps) {
     if (!conversationId) {
       setNewChatState("idle");
     }
-  }, [conversationId]);
+  }, [conversationId, setNewChatState]);
 
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, toolDecision: boolean | null = null) => {
     // Prevent sending message if API keys are not loaded
     if (!apiKeys || apiKeys.length === 0) {
       console.warn('API keys not loaded yet. Cannot send message.');
@@ -93,7 +93,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
 
     // Add user message
     const userMessage: MessageCreate = {
-      model: selectedModel,
+      model: selectedModel.id,
       content,
     };
     setOutgoingMessage(userMessage);
@@ -107,19 +107,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
 
     try {
       // Determine which provider's API key to use based on selectedModel
-      let provider;
-      if (selectedModel.startsWith('claude-')) {
-        provider = 'anthropic';
-      } else if (selectedModel.startsWith('llama-')) {
-        provider = 'meta';
-      } else if (selectedModel.startsWith('gemini-')) {
-        provider = 'google';
-      } else if (selectedModel.startsWith('gpt-')) {
-        provider = 'openai';
-      } else {
-        toast.error(`Unsupported model: ${selectedModel}`);
-        throw new Error(`Unsupported model: ${selectedModel}`);
-      }
+      const provider = selectedModel.provider;
 
       // Find the API key ID for the selected provider
       const apiKey = apiKeys.find(key => key.provider === provider);
@@ -133,13 +121,15 @@ export function ChatInterface({ }: ChatInterfaceProps) {
 
       try {
         const thisModel = selectedModel
-        const response = await apiFetchStreaming('POST', '/chat/generate', {
+        const body = {
           conversation_id: conversationId,
-          model: selectedModel,
+          model: selectedModel.id,
           message: content,
           api_key_id: apiKey.id,
-          stream: true, // Request streaming
-        });
+          tool_decision: toolDecision,
+        }
+
+        const response = await apiFetchStreaming('POST', '/chat/generate', body);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -215,7 +205,6 @@ export function ChatInterface({ }: ChatInterfaceProps) {
             }
 
           });
-
         }
 
         // After the stream is done, the message is complete in the state
@@ -238,11 +227,16 @@ export function ChatInterface({ }: ChatInterfaceProps) {
         content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date(),
         created_at: new Date().toISOString(),
-        model: selectedModel,
+        model: selectedModel.id,
+        mcp_tool_use: null,
       };
 
       setMessages(prev => [...prev, errorMessage]);
     }
+  };
+
+  const handleToolDecision = (toolDecide: boolean) => {
+    handleSendMessage('', toolDecide);
   };
 
   return (
@@ -262,6 +256,9 @@ export function ChatInterface({ }: ChatInterfaceProps) {
               content={message.content}
               timestamp={message.timestamp}
               model={message.model}
+              toolCall={message.mcp_tool_use}
+              onDecision={handleToolDecision}
+              isGenerating={isLoading}
             />
           ))}
           {outgoingMessage && (
