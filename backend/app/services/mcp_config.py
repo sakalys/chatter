@@ -133,7 +133,7 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> None:
             # Add new tools
             for tool_data in result.tools:
                 tool = MCPTool(
-                    mcp_config_id=mcp_config.id,
+                    mcp_config=mcp_config,
                     name=tool_data.name,
                     description=tool_data.description,
                     inputSchema=tool_data.inputSchema,

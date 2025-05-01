@@ -31,7 +31,7 @@ async def read_mcp_configs(
     """
     Get all MCP configurations for the current user.
     """
-    mcp_configs = await get_mcp_configs_by_user(db, current_user.id)
+    mcp_configs = await get_mcp_configs_by_user(db, current_user)
     return mcp_configs
 
 
