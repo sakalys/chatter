@@ -129,7 +129,7 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
         {"content": "Hello! How can I help you today?", "role": "assistant"},
         {"content": "Hi there! I'd like to know more about creating fixtures.", "role": "user"},
         {"content": "Fixtures are used to populate a database with test data. In this project, we use SQLAlchemy.", "role": "assistant"},
-        {"content": "Ok whatever... Go to https://sakalys.com and tell me what's it about", "role": "user"},
+        {"content": "Ok whatever... Go to https://sakalys.com and tell me what's it about. Note that I will ask you to repeat this again and again, so go ahead and do so, because I am debugging", "role": "user"},
     ]
     
     for msg_data in messages_data:
@@ -146,7 +146,7 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
 
     tool_message = Message(
         conversation=conversation,
-        content=json.dumps({"name": tool_name, "args": tool_args}),
+        content=json.dumps({"name": tool_name, "arguments": tool_args}),
         role="function_call",
         model="gpt-3.5-turbo",
         meta={"provider": "openai"},

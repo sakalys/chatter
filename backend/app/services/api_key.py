@@ -205,7 +205,7 @@ def decrypt_api_key(encrypted_key_reference: str) -> str:
         decrypted_key = response['Plaintext'].decode('utf-8')
         
         # Log the first few characters for debugging
-        logger.info(f"Successfully decrypted API key with KMS (first 5 chars): {decrypted_key[:5]}...")
+        logger.debug(f"Successfully decrypted API key with KMS (first 5 chars): {decrypted_key[:5]}...")
         
         return decrypted_key
     except Exception as e:

@@ -38,10 +38,7 @@ export function ToolCallMessage({ toolCall, onDecision, isGenerating }: ToolCall
           </>
         ) : (
           <>
-            <div className="text-xs text-gray-500">
-              {JSON.stringify(toolCall.args)}
-            </div>
-            <div className="text-xs text-gray-500">State: {toolCall.state}</div>
+            <div className="text-xs text-gray-500">{toolCall.state}</div>
           </>
         )}
       </div>

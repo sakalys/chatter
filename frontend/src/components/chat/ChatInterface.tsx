@@ -82,6 +82,8 @@ export function ChatInterface({ }: ChatInterfaceProps) {
     }
   }, [conversationId, setNewChatState]);
 
+  console.log(messages.slice(-2).map(message =>  message.role))
+
 
   const handleSendMessage = async (content: string, toolDecision: boolean | null = null) => {
     // Prevent sending message if API keys are not loaded
@@ -152,7 +154,6 @@ export function ChatInterface({ }: ChatInterfaceProps) {
           }
 
           const buffer = decoder.decode(value, { stream: true });
-          console.log(buffer);
 
           // Process complete SSE messages in the buffer
           const events = buffer.split('\r\n\r\n');
@@ -185,21 +186,32 @@ export function ChatInterface({ }: ChatInterfaceProps) {
 
               // Assuming the data is the text chunk
               setIncomingMessage({ model: thisModel, message: message });
+            } else if (eventType === 'message_done' && typeof eventData === 'string') {
+              console.log('message done');
+              const message: Message = JSON.parse(eventData);
+
+              setMessages(prev => [...prev, message]);
+            } else if (eventType === 'function_call' && typeof eventData === 'string') {
+              console.log('function call');
+              const message: Message = JSON.parse(eventData);
+
+              setMessages(prev => [...prev, message]);
             } else if (eventType === 'done') {
               // The stream is finished, no more data for this message
               setIsLoading(false); // Stop loading when done
 
               // Navigate and update state only after the stream is done
               // Use newConversationId explicitly for navigation and state update
+              setIncomingMessage(null)
+              setOutgoingMessage(null)
               if (!conversationId && newConversationId) {
                 navigate(`/chat/${newConversationId}`);
                 setConversationId(newConversationId);
-                setIncomingMessage(null)
-                setOutgoingMessage(null)
                 setNewChatState("no");
                 refetchConversations(); // Refetch conversations after new chat is created and done
               }
             } else if (eventType === 'conversation_title_updated' && typeof eventData === 'string') {
+              console.log('conversation_title_updated');
               // Update the conversation title state
               setConversationTitle(eventData);
             }

@@ -6,6 +6,7 @@ import logging
 from re import S
 from typing import Any, AsyncGenerator, Literal, Union
 from uuid import UUID
+from app.models.mcp_tool_use import ToolUseState
 from google import genai
 from google.genai import types
 from openai import AsyncOpenAI # Import AsyncOpenAI
@@ -14,6 +15,7 @@ from fastapi import HTTPException, status
 from sse_starlette.sse import EventSourceResponse
 from mcp import ClientSession
 from mcp.client.sse import sse_client
+from pydantic import BaseModel
 
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
@@ -24,7 +26,7 @@ from app.schemas.message import MessageCreate, ToolUseCreate
 from app.models.user import User # Import User model
 from app.services.api_key import decrypt_api_key
 from app.services.conversation import add_message_to_conversation, get_conversation_by_id, get_conversation_by_id_and_user_id, update_conversation
-from app.schemas.conversation import ConversationCreate, ConversationUpdate
+from app.schemas.conversation import ConversationCreate, ConversationUpdate, MessageResponse
 
 logger = logging.getLogger(__name__) # Get logger
 
@@ -42,6 +44,15 @@ class StreamEvent:
     def __str__(self):
         return f"Event: {self.event}, Data: {self.data}"
 
+class FunctionCall(BaseModel):
+    """
+    Class to represent a function call event.
+    """
+    name: str
+    arguments: dict[str, Any] | None
+
+    def __str__(self):
+        return f"FunctionCall(name={self.name}, arguments={self.arguments})"
 
 async def _generate_google_response(
     messages: list[dict[str, str]],
@@ -95,7 +106,7 @@ async def _generate_google_response(
                 <tool_call>
                     {msg['content']}
                 </tool_call>
-                Proceed with the users' request.
+                Proceed with the user's request.
 """}]})
         else:
             logger.warning(f"Message missing 'content' key: {msg}")
@@ -110,20 +121,17 @@ async def _generate_google_response(
             "tools": tools,
         },
     ):
-        print(chunk)
         if chunk.candidates[0].content.parts[0].function_call:
             function_call = chunk.candidates[0].content.parts[0].function_call
 
-            yield StreamEvent("function_call", json.dumps(function_call.model_dump()))
+            our_call = FunctionCall(
+                name=function_call.name,
+                arguments=function_call.args,
+            )
+
+            yield StreamEvent("function_call", json.dumps(our_call.model_dump()))
 
             continue
-            # # Call the MCP server with the predicted tool
-            # result = await session.call_tool(
-            #     function_call.name, arguments=function_call.args
-            # )
-            # print(result.content[0].text)
-            # Continue as shown in step 4 of "How Function Calling Works"
-            # and create a user friendly response
 
         yield StreamEvent("text", chunk.text if chunk.text else "")
 
@@ -296,6 +304,10 @@ async def handle_chat_request(
 
         mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
 
+        tool_use.state = ToolUseState.approved if tool_decision else ToolUseState.rejected
+        db.add(tool_use)
+        await db.commit()
+
         # call the tool
         async with sse_client(mcp_config.url) as streams:
             async with ClientSession(*streams) as session:
@@ -305,7 +317,6 @@ async def handle_chat_request(
                     tool_use.name, arguments=tool_use.args
                 )
 
-                print(result)
                 formatted_messages.append({
                     "role": "assistant",
                     "content": f"""
@@ -314,7 +325,6 @@ async def handle_chat_request(
                     </tool_call_response>
                     """
                 })
-                print(formatted_messages)
 
     try:
         logger.debug("Calling generate_chat_response")
@@ -351,11 +361,6 @@ async def handle_chat_request(
                     data = json.loads(event.data)
                     tool_calls.append(data)
 
-                    yield {
-                        "event": "function_call",
-                        "data": event.data
-                    }
-
                 elif event.event == "text":
                     # Handle text event
                     content += event.data
@@ -367,7 +372,7 @@ async def handle_chat_request(
                 else:
                     logger.warning(f"Unknown event type: {event.event}")
 
-            await add_message_to_conversation(
+            created = await add_message_to_conversation(
                 db,
                 MessageCreate(
                     role="assistant",
@@ -377,6 +382,11 @@ async def handle_chat_request(
                 ),
                 conversation
             )
+
+            yield {
+                "event": "message_done",
+                "data": MessageResponse.model_validate(created, from_attributes=True).model_dump_json(by_alias=True)
+            }
 
             for tool_call in tool_calls:
                 # fetch the user's MCP tool from db
@@ -395,21 +405,27 @@ async def handle_chat_request(
                     logger.error(f"MCP Tool not found for function call: {tool_call}")
                     continue
 
-                await add_message_to_conversation(
+                message = await add_message_to_conversation(
                     db,
                     MessageCreate(
                         role="function_call",
-                        content=json.dumps({"name": tool_call["name"], "arguments": tool_call["args"]}),
+                        content=json.dumps({"name": tool_call["name"], "arguments": tool_call["arguments"]}),
                         model=model,
                         meta={"provider": api_key.provider},
                         tool_use=ToolUseCreate(
                             name=tool_call["name"],
-                            args=tool_call["args"],
+                            args=tool_call["arguments"],
                         )
                     ),
                     conversation,
                     mcp_tool,
                 )
+
+                yield {
+                    "event": "function_call",
+                    "data": MessageResponse.model_validate(message, from_attributes=True).model_dump_json(by_alias=True)
+                }
+
 
             # Generate and set conversation title after the first response
             if is_new_conversation and content:

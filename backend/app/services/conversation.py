@@ -3,7 +3,7 @@ from typing import Optional, Sequence
 from uuid import UUID
 
 from app.models.mcp_tool import MCPTool
-from app.models.mcp_tool_use import MCPToolUse
+from app.models.mcp_tool_use import MCPToolUse, ToolUseState
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -16,7 +16,7 @@ from app.schemas.message import MessageCreate
 
 async def get_conversations_by_user(
     db: AsyncSession, user_id: UUID
-) -> list[Conversation]:
+) -> Sequence[Conversation]:
     """
     Get all conversations for a user.
     
@@ -181,8 +181,7 @@ async def add_message_to_conversation(
     db: AsyncSession,
     message_in: MessageCreate,
     conversation: Conversation,
-    mcp_tool: Optional[MCPTool] = None
-
+    mcp_tool: Optional[MCPTool] = None,
 ) -> Message:
     """
     Add a message to a conversation.
@@ -208,6 +207,7 @@ async def add_message_to_conversation(
         tool_use = MCPToolUse(
             name=message_in.tool_use.name,
             args=message_in.tool_use.args,
+            state=ToolUseState.pending,
             tool=mcp_tool,
         )
         message.mcp_tool_use = tool_use
