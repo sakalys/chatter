@@ -139,6 +139,10 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    {/* Banner */}
+    <div className="bg-yellow-200 text-yellow-800 text-center p-2">
+      We're actively improving the site daily! You might encounter some unexpected behavior. Please bear with us and report any issues <a href="#" className="underline">here</a>.
+    </div>
     <GoogleOAuthProvider clientId={googleClientId}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
