@@ -20,6 +20,7 @@ class ChatCompletionRequest(BaseModel):
     message: str
     model: str
     api_key_id: str
+    tool_decision: Optional[bool] = None
 
 
 @router.api_route("/generate", methods=["GET", "POST"], response_model=dict[str, Any])
@@ -67,6 +68,7 @@ async def generate_chat_response(
         user_message=request.message,
         model=request.model,
         api_key=api_key,
+        tool_decision=request.tool_decision,
     )
     logger.debug("Finished handle_chat_request") # Log after calling service
     

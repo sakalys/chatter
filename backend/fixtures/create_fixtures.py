@@ -129,8 +129,7 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
         {"content": "Hello! How can I help you today?", "role": "assistant"},
         {"content": "Hi there! I'd like to know more about creating fixtures.", "role": "user"},
         {"content": "Fixtures are used to populate a database with test data. In this project, we use SQLAlchemy.", "role": "assistant"},
-        {"content": "That's helpful. How do I run the fixture script?", "role": "user"},
-        {"content": "You can run the `create_fixtures.py` script directly using Python.", "role": "assistant"},
+        {"content": "Ok whatever... Go to https://sakalys.com and tell me what's it about", "role": "user"},
     ]
     
     for msg_data in messages_data:

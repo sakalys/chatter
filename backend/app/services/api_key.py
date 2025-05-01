@@ -178,7 +178,7 @@ def decrypt_api_key(encrypted_key_reference: str) -> str:
         Decrypted API key
     """
     try:
-        logger.info(f"Attempting to decrypt API key using KMS key: {settings.aws_kms_key_id}")
+        logger.debug(f"Attempting to decrypt API key using KMS key: {settings.aws_kms_key_id}")
         # Create KMS client
         kms = boto3.client(
             'kms',

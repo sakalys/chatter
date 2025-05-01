@@ -1,6 +1,7 @@
 from asyncio import constants
 from datetime import datetime
 import json
+from json import tool
 import logging
 from re import S
 from typing import Any, AsyncGenerator, Literal, Union
@@ -88,6 +89,14 @@ async def _generate_google_response(
                 formatted_messages.append({"role": "model", "parts": [{"text": msg["content"]}]})
             elif msg["role"] == "system":
                 formatted_messages.append({"role": "user", "parts": [{"text": f"System: {msg['content']}"}]})
+            elif msg["role"] == "function_call":
+                formatted_messages.append({"role": "model", "parts": [{"text": f"""
+                The user approved a previous tool call and following is the result of the tool call:
+                <tool_call>
+                    {msg['content']}
+                </tool_call>
+                Proceed with the users' request.
+"""}]})
         else:
             logger.warning(f"Message missing 'content' key: {msg}")
 
@@ -101,6 +110,7 @@ async def _generate_google_response(
             "tools": tools,
         },
     ):
+        print(chunk)
         if chunk.candidates[0].content.parts[0].function_call:
             function_call = chunk.candidates[0].content.parts[0].function_call
 
@@ -213,6 +223,7 @@ async def handle_chat_request(
     model: str,
     api_key: ApiKey,
     conversation_id: UUID | None = None,
+    tool_decision: bool | None = None,
 ) -> Any:
     """
     Handle a chat request.
@@ -228,7 +239,7 @@ async def handle_chat_request(
         Returns:
             Response from the LLM provider or SSE response, including the conversation ID
     """
-    logger.debug(f"Handling chat request for user: {user.id}, conversation: {conversation_id}") # Log handling request
+    logger.debug(f"Handling chat request for user: {user.id}, conversation: {conversation_id}")
     
     is_new_conversation = conversation_id is None
 
@@ -237,32 +248,34 @@ async def handle_chat_request(
         from app.services.conversation import create_conversation
         conversation = await create_conversation(db, ConversationCreate(), user.id)
         conversation_id = conversation.id
-        logger.debug(f"Created new conversation with ID: {conversation_id}") # Log new conversation
+        logger.debug(f"Created new conversation with ID: {conversation_id}")
     else:
         # Get conversation to ensure it exists and belongs to the user
         conversation = await get_conversation_by_id_and_user_id(db, conversation_id, user.id)
         if not conversation:
-            logger.error(f"Conversation not found for ID: {conversation_id}") # Log error
+            logger.error(f"Conversation not found for ID: {conversation_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Conversation not found"
             )
 
-    # Add user message to conversation
-    await add_message_to_conversation(
-        db,
-        MessageCreate(
-            role="user",
-            content=user_message,
-        ),
-        conversation
-    )
-    logger.debug(f"Added user message to conversation: {conversation.id}") # Log adding user message
+    if tool_decision is None:
+        await add_message_to_conversation(
+            db,
+            MessageCreate(
+                role="user",
+                content=user_message,
+                model=model,
+            ),
+            conversation
+        )
+        logger.debug(f"Added user message to conversation: {conversation.id}")
     
     # Get all messages in the conversation
     from app.services.conversation import get_messages_by_conversation
     messages = await get_messages_by_conversation(db, conversation.id)
-    logger.debug(f"Retrieved {len(messages)} messages for conversation: {conversation.id}") # Log retrieving messages
+    logger.debug(f"Retrieved {len(messages)} messages for conversation: {conversation.id}")
+
 
     # Format messages for the provider
     formatted_messages = []
@@ -272,11 +285,41 @@ async def handle_chat_request(
             "content": msg.content
         })
 
+    if tool_decision is not None and len(messages) and messages[-1].role == "function_call":
+        logger.debug("Handling tool decision")
+
+        tool_use = messages[-1].mcp_tool_use
+        if tool_use == None:
+            raise
+
+        mcp_tool: MCPTool = await tool_use.awaitable_attrs.tool
+
+        mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
+
+        # call the tool
+        async with sse_client(mcp_config.url) as streams:
+            async with ClientSession(*streams) as session:
+                await session.initialize()
+
+                result = await session.call_tool(
+                    tool_use.name, arguments=tool_use.args
+                )
+
+                print(result)
+                formatted_messages.append({
+                    "role": "assistant",
+                    "content": f"""
+                    <tool_call_response>
+                    {result.content[0].text}
+                    </tool_call_response>
+                    """
+                })
+                print(formatted_messages)
+
     try:
-        logger.debug("Calling generate_chat_response") # Log before calling generation
+        logger.debug("Calling generate_chat_response")
         # Decrypt the API key before passing it to generate_chat_response
         decrypted_key = decrypt_api_key(api_key.key_reference)
-        logger.debug(f"Decrypted API key (first 5 chars): {decrypted_key[:5]}...") # Log first 5 chars of decrypted key
         
         # Generate response - pass the formatted messages list
         response = await generate_chat_response(
@@ -286,7 +329,7 @@ async def handle_chat_request(
             api_key=decrypted_key,  # Pass the decrypted key directly
             provider=api_key.provider,  # Pass the provider separately
         )
-        logger.debug(f"Finished generate_chat_response. Response type: {type(response)}") # Log after calling generation and response type
+        logger.debug(f"Finished generate_chat_response. Response type: {type(response)}")
             
         async def event_generator():
             # If it's a new conversation, send an initial event with the conversation ID
@@ -368,20 +411,6 @@ async def handle_chat_request(
                     mcp_tool,
                 )
 
-                # mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
-
-                # # call the tool
-                # async with sse_client(mcp_config.url) as streams:
-                #     async with ClientSession(*streams) as session:
-                #         await session.initialize()
-
-                #         result = await session.call_tool(
-                #             tool_call["name"], arguments=tool_call["args"]
-                #         )
-
-                #         print(result)
-
-
             # Generate and set conversation title after the first response
             if is_new_conversation and content:
                 generated_title = await generate_and_set_conversation_title(
@@ -411,7 +440,7 @@ async def handle_chat_request(
     except Exception as e:
         # Log the error with traceback and return an HTTPException
         import traceback
-        logger.error(f"Error generating chat response: {e}", exc_info=True) # Log error with traceback
+        logger.error(f"Error generating chat response: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating chat response: {e}"
