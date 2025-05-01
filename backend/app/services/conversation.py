@@ -126,7 +126,7 @@ async def create_conversation(
     """
     conversation = Conversation(
         user_id=user_id,
-        title="Untitled",
+        title=conversation_in.title,
     )
     db.add(conversation)
     await db.commit()

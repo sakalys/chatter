@@ -119,7 +119,7 @@ async def test_add_message_to_conversation(test_db: AsyncSession, test_conversat
         role="user",
         content="Hello, this is a test message",
     )
-    message = await add_message_to_conversation(test_db, message_in, test_conversation.id)
+    message = await add_message_to_conversation(test_db, message_in, test_conversation)
     
     assert message.role == message_in.role
     assert message.content == message_in.content

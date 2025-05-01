@@ -41,6 +41,7 @@ cd backend
 #     -e DB_PORT=${DB_PORT} \
 #     backend bash -c "uv run alembic upgrade head && uv run pytest -xvs tests"
   
-bash -c "uv run alembic upgrade head && uv run pytest -xvs tests"
+uv run alembic upgrade head
+uv run pytest -xvs tests
 
 echo "All tests and linting passed!"

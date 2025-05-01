@@ -38,19 +38,6 @@ async def read_conversations(
     return conversations
 
 
-@router.post("/", response_model=ConversationResponse)
-async def create_user_conversation(
-    conversation_in: ConversationCreate,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: DB,
-):
-    """
-    Create a new conversation for the current user.
-    """
-    conversation = await create_conversation(db, conversation_in, current_user.id)
-    return conversation
-
-
 @router.get("/{conversation_id}", response_model=ConversationDetailResponse)
 async def read_conversation(
     conversation_id: UUID,
