@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field, validator
-from pydantic import ConfigDict
+from pydantic import BaseModel, Field
 import os
 from dotenv import load_dotenv
 
@@ -8,8 +7,6 @@ load_dotenv()
 class Settings(BaseModel):
     """Application settings."""
 
-    model_config = ConfigDict(env_file=None, extra='ignore')
-    
     # API settings
     api_title: str = "Moo Point API"
     api_description: str = "API for a model-agnostic chat platform with tool use using MCP"
@@ -20,18 +17,12 @@ class Settings(BaseModel):
     debug: bool = Field(default=True)
     test_mode_enabled: bool = Field(default=False)
 
-    @validator('test_mode_enabled', pre=True)
-    def parse_boolean(cls, v):
-        if isinstance(v, str):
-            return v.lower() == 'true'
-        return v
-    
     # Security
     secret_key: str = Field(default="changethisinsecretkeytosomethingsecure")
     access_token_expire_minutes: int = Field(default=30)
     
     # Database
-    database_url: str = Field(default=os.getenv("DATABASE_URL"))
+    database_url: str = Field(default=os.getenv("DATABASE_URL", ""))
     
     # Redis
     redis_url: str = Field(default="redis://redis:6379/0")

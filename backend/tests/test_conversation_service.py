@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from app.models.conversation import Conversation
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -139,8 +140,8 @@ async def test_get_messages_by_conversation(test_db: AsyncSession, test_conversa
         role="assistant",
         content="Second message",
     )
-    await add_message_to_conversation(test_db, message_in1, test_conversation.id)
-    await add_message_to_conversation(test_db, message_in2, test_conversation.id)
+    await add_message_to_conversation(test_db, message_in1, test_conversation)
+    await add_message_to_conversation(test_db, message_in2, test_conversation)
     
     messages = await get_messages_by_conversation(test_db, test_conversation.id)
     
@@ -150,7 +151,7 @@ async def test_get_messages_by_conversation(test_db: AsyncSession, test_conversa
 
 
 @pytest.mark.asyncio
-async def test_get_conversation_with_messages(test_db: AsyncSession, test_user: User, test_conversation):
+async def test_get_conversation_with_messages(test_db: AsyncSession, test_user: User, test_conversation: Conversation):
     """Test getting a conversation with its messages."""
     # Add some messages to the conversation
     message_in1 = MessageCreate(
@@ -161,8 +162,8 @@ async def test_get_conversation_with_messages(test_db: AsyncSession, test_user: 
         role="assistant",
         content="Second message",
     )
-    await add_message_to_conversation(test_db, message_in1, test_conversation.id)
-    await add_message_to_conversation(test_db, message_in2, test_conversation.id)
+    await add_message_to_conversation(test_db, message_in1, test_conversation)
+    await add_message_to_conversation(test_db, message_in2, test_conversation)
     
     conversation = await get_conversation_with_messages(test_db, test_conversation.id, test_user.id)
     

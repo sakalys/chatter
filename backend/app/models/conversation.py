@@ -1,22 +1,27 @@
+import datetime
 import uuid
 
-from sqlalchemy import Column, ForeignKey, String, DateTime, func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey, String, DateTime, func
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from app.db.base import Base
 
+from typing import List
+import typing
+if typing.TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.message import Message
 
 class Conversation(Base):
     """Model for storing chat conversations."""
     
     __tablename__ = "conversations"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4) # Add UUID primary key
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    title = Column(String, nullable=True)  # Optional title for the conversation
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title: Mapped[str] = mapped_column(nullable=True)  # Optional title for the conversation
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     # Relationships
-    user = relationship("User", back_populates="conversations")
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+    user: Mapped["User"] = relationship(back_populates="conversations")
+    messages: Mapped[List["Message"]] = relationship(back_populates="conversation", cascade="all, delete-orphan")

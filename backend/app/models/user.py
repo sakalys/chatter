@@ -1,9 +1,15 @@
-from sqlalchemy import Boolean, Column, String
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 import uuid
 
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+
 from app.db.base import Base
+
+import typing
+if typing.TYPE_CHECKING:
+    from app.models.api_key import ApiKey
+    from app.models.conversation import Conversation
+    from app.models.mcp_config import MCPConfig
 
 
 class User(Base):
@@ -11,14 +17,14 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False) # Revert to not nullable
-    full_name = Column(String, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_superuser = Column(Boolean, default=False, nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(unique=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(nullable=False)
+    full_name: Mapped[str | None] = mapped_column(nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_superuser: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     # Relationships
-    api_keys = relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
-    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
-    mcp_configs = relationship("MCPConfig", back_populates="user", cascade="all, delete-orphan")
+    api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    conversations: Mapped[list["Conversation"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    mcp_configs: Mapped[list["MCPConfig"]] = relationship(back_populates="user", cascade="all, delete-orphan")

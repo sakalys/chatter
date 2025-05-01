@@ -1,11 +1,15 @@
 from datetime import UTC, datetime
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Text, types
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, ForeignKey, Text, types
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from app.db.base import Base
+
+import typing
+if typing.TYPE_CHECKING:
+    from app.models.conversation import Conversation
+    from app.models.mcp_tool_use import MCPToolUse
 
 
 class Message(Base):
@@ -13,14 +17,14 @@ class Message(Base):
 
     __tablename__ = "messages"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
-    conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
-    role = Column(String, nullable=False)  # "user", "assistant", "system", etc.
-    content = Column(Text, nullable=False)
-    model = Column(String, nullable=True)  # The model used for this message (if assistant)
-    meta = Column(types.JSON, nullable=True)  # Additional metadata (tokens, model parameters, etc.)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
+    role: Mapped[str] = mapped_column(nullable=False)  # "user", "assistant", "system", etc.
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    model: Mapped[str | None] = mapped_column(nullable=True)  # The model used for this message (if assistant)
+    meta: Mapped[dict | None] = mapped_column(types.JSON, nullable=True)  # Additional metadata (tokens, model parameters, etc.)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False)
 
     # Relationships
-    conversation = relationship("Conversation", back_populates="messages")
-    mcp_tool_use = relationship("MCPToolUse", back_populates="message", uselist=False, cascade="all, delete-orphan")
+    conversation: Mapped["Conversation"] = relationship(back_populates="messages")
+    mcp_tool_use: Mapped["MCPToolUse | None"] = relationship(back_populates="message", uselist=False, cascade="all, delete-orphan")

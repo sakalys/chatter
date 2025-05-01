@@ -1,5 +1,5 @@
 from json import tool
-from typing import Optional
+from typing import Optional, Sequence
 from uuid import UUID
 
 from app.models.mcp_tool import MCPTool
@@ -84,7 +84,9 @@ async def get_conversation_by_id_and_user_id(
 
 
 async def get_conversation_with_messages(
-    db: AsyncSession, conversation_id: UUID, user_id: UUID
+    db: AsyncSession,
+    conversation_id: UUID,
+    user_id: UUID,
 ) -> Conversation | None:
     """
     Get a conversation with its messages by ID for a specific user.
@@ -219,7 +221,7 @@ async def add_message_to_conversation(
 async def get_messages_by_conversation(
     db: AsyncSession,
     conversation_id: UUID,
-) -> list[Message]:
+) -> Sequence[Message]:
     """
     Get all messages for a conversation.
     
