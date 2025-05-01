@@ -13,7 +13,7 @@ from app.db.session import get_db
 
 # Use PostgreSQL for testing
 # The connection details are expected to be provided via environment variables
-TEST_DATABASE_URL = "postgresql+asyncpg://test-user:test-password@db:5432/test-db"
+TEST_DATABASE_URL = "postgresql+asyncpg://test-user:test-password@localhost:5432/test-db"
 
 
 @pytest.fixture

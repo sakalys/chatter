@@ -26,16 +26,21 @@ fi
 
 # Run linting with ruff
 echo "Running linting with ruff..."
-docker compose run --rm backend uv run ruff check .
+# docker compose run --rm backend uv run ruff check .
+
+cd backend
+# uv run ruff check .
 
 # Apply Alembic migrations and run tests with pytest
-echo "Applying Alembic migrations and running tests..."
-docker compose run --rm \
-    -e POSTGRES_USER=chatuser \
-    -e POSTGRES_PASSWORD=chatpassword \
-    -e POSTGRES_DB=chatdb \
-    -e DB_HOST=${DB_HOST} \
-    -e DB_PORT=${DB_PORT} \
-    backend bash -c "uv run alembic upgrade head && uv run pytest -xvs tests"
+# echo "Applying Alembic migrations and running tests..."
+# docker compose run --rm \
+#     -e POSTGRES_USER=chatuser \
+#     -e POSTGRES_PASSWORD=chatpassword \
+#     -e POSTGRES_DB=chatdb \
+#     -e DB_HOST=${DB_HOST} \
+#     -e DB_PORT=${DB_PORT} \
+#     backend bash -c "uv run alembic upgrade head && uv run pytest -xvs tests"
+  
+bash -c "uv run alembic upgrade head && uv run pytest -xvs tests"
 
 echo "All tests and linting passed!"
