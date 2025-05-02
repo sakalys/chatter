@@ -11,7 +11,7 @@ import { ToastContainer } from 'react-toastify';
 import LoadingSpinner from './components/ui/LoadingSpinner.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 
-const googleClientId = '181853076785-uf93784hrobvqqfrgftek08hd5n03m25.apps.googleusercontent.com';
+const googleClientId = import.meta.env.GOOGLE_CLIENT_ID || '181853076785-uf93784hrobvqqfrgftek08hd5n03m25.apps.googleusercontent.com';
 
 const queryClient = new QueryClient({defaultOptions: {queries: {refetchOnWindowFocus: false, retry: false}}});
 
