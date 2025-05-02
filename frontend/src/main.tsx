@@ -71,7 +71,7 @@ const TopMostWrapper = () => {
   return (
     <div className="flex flex-col h-screen">
       <div className="bg-yellow-200 text-yellow-800 text-center p-2">
-        We're actively improving the site daily! You might encounter some unexpected behavior. Please bear with us and report any issues <a href="#" className="underline">here</a>.
+        We're actively improving the site daily! You might encounter some unexpected behavior. Please bear with us and report any issues <a target="_blank" href="https://forms.gle/6tz5rvBVzoYv6Eos6" className="underline">here</a>.
       </div>
 
       <div className="flex-1 overflow-y-auto relative">
