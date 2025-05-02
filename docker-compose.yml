@@ -7,8 +7,6 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend:/app
-    depends_on:
-      - backend
     environment:
       - VITE_API_URL=http://localhost:8000
     networks:
@@ -25,17 +23,13 @@ services:
     depends_on:
       - db
       - redis
-      - localstack
     environment:
       - DATABASE_URL=postgresql://chatuser:chatpassword@db:5432/chatdb
       - REDIS_URL=redis://redis:6379/0
-      - AWS_ENDPOINT_URL=http://localstack:4566
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_REGION=us-east-1
       - ENV=development
       - TEST_MODE_ENABLED=true
-      - SECRET_KEY=changethisinsecretkeytosomethingsecure
+      - SECRET_KEY=8GymRdrFKf58ACUt02R7LpXPI1kcbmTxx3hf-VluCg0=
+      - SECRET_KEY_TOKENS=yababdadadafsdafhsdglfsdhfyfasdfdsan
       - UV_CACHE_DIR=/app/.uv_cache
     networks:
       - chat-network
@@ -60,18 +54,6 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - chat-network
-
-  localstack:
-    build:
-      context: ./localstack
-      dockerfile: Dockerfile
-    ports:
-      - "4566:4566"
-    environment:
-      - SERVICES=kms
-      - DEBUG=1
     networks:
       - chat-network
 

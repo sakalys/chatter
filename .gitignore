@@ -101,7 +101,6 @@ yarn-error.log*
 /storage/*.key
 
 # Local development
-.localstack/
 backend/.ruff_cache/
 backend/fixtures/google_api_key.txt
 backend/fixtures/openai_api_key.txt
