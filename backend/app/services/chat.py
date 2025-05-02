@@ -120,7 +120,14 @@ async def _generate_google_response(
             "tools": tools,
         },
     ):
-        if chunk.candidates[0].content.parts[0].function_call:
+        if (chunk.candidates 
+            and len(chunk.candidates) > 0
+            and chunk.candidates[0].content 
+            and chunk.candidates[0].content.parts 
+            and len(chunk.candidates[0].content.parts) > 0
+            and chunk.candidates[0].content.parts[0].function_call
+            and chunk.candidates[0].content.parts[0].function_call.name is not None
+        ): 
             function_call = chunk.candidates[0].content.parts[0].function_call
 
             our_call = FunctionCall(
