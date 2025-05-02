@@ -23,7 +23,7 @@ from app.services.mcp_config import (
 router = APIRouter()
 
 
-@router.get("/", response_model=list[MCPConfigResponse])
+@router.get("", response_model=list[MCPConfigResponse])
 async def read_mcp_configs(
     current_user: Annotated[User, Depends(get_current_user)],
     db: DB,
@@ -35,7 +35,7 @@ async def read_mcp_configs(
     return mcp_configs
 
 
-@router.post("/", response_model=MCPConfigResponse)
+@router.post("", response_model=MCPConfigResponse)
 async def create_user_mcp_config(
     mcp_config_in: MCPConfigCreate,
     current_user: Annotated[User, Depends(get_current_user)],

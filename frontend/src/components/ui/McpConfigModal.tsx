@@ -4,7 +4,7 @@ import { apiFetch } from '../../util/api';
 import { McpConfig } from '../../types'; // Import McpConfig from types
 
 const fetchMcpConfigs = async (): Promise<McpConfig[]> => {
-  return apiFetch<McpConfig[]>('GET', '/mcp-configs/');
+  return apiFetch<McpConfig[]>('GET', '/mcp-configs');
 };
 
 interface McpConfigModalProps {
@@ -57,7 +57,7 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
       // A more robust check might involve verifying if the config was part of the initial fetch.
       if (typeof id === 'string' && !isNaN(Number(id)) && id.length > 10) { // Basic check for timestamp-like ID
         // New config, use POST
-        savedConfig = await apiFetch<McpConfig>('POST', '/mcp-configs/', configToSave);
+        savedConfig = await apiFetch<McpConfig>('POST', '/mcp-configs', configToSave);
         // Replace the temporary config with the saved one from the backend
         setConfigs(prev => prev.map(config =>
           config.id === id ? savedConfig : config
