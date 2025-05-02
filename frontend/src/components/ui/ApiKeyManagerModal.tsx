@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '../../util/api';
 
 interface ApiKeyManagerModalProps {
   isOpen: boolean;
@@ -13,58 +14,8 @@ interface ApiKey {
   key?: string;
 }
 
-const fetchApiKeys = async (): Promise<ApiKey[]> => {
-  const authToken = localStorage.getItem('authToken');
-  if (!authToken) {
-    console.warn('Authentication token not found');
-    throw new Error('Authentication token not found');
-  }
+const saveApiKey = async (): Promise<ApiKey> => {
 
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/api-keys`, {
-    headers: {
-      'Authorization': `Bearer ${authToken}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  return response.json();
-};
-
-const saveApiKey = async (keyData: ApiKey): Promise<ApiKey> => {
-  const authToken = localStorage.getItem('authToken');
-  if (!authToken) {
-    console.warn('Authentication token not found');
-    throw new Error('Authentication token not found');
-  }
-
-  const url = keyData.id
-    ? `${import.meta.env.VITE_API_URL}/api/v1/api-keys/${keyData.id}`
-    : `${import.meta.env.VITE_API_URL}/api/v1/api-keys`;
-
-  const method = keyData.id ? 'PUT' : 'POST';
-
-  const response = await fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authToken}`,
-    },
-    body: JSON.stringify({
-      provider: keyData.provider,
-      name: keyData.name,
-      key: keyData.key,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(`Error saving API key for ${keyData.provider}: ${errorData.detail || response.statusText}`);
-  }
-
-  return response.json();
 };
 
 
@@ -77,14 +28,24 @@ export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps)
   // Fetch existing API keys using useQuery
   const { data: existingKeys, isLoading: isLoadingKeys, error: fetchError } = useQuery<ApiKey[], Error>({
     queryKey: ['apiKeys'],
-    queryFn: fetchApiKeys,
+    queryFn: () => apiFetch('GET', '/api-keys'),
     enabled: isOpen, // Only fetch when the modal is open
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
 
   // Use useMutation for saving API keys
   const saveApiKeyMutation = useMutation<ApiKey, Error, ApiKey>({
-    mutationFn: saveApiKey,
+    mutationFn: (keyData: ApiKey) => {
+      const url = keyData.id ? `/api-keys/${keyData.id}` : '/api-keys';
+
+      const method = keyData.id ? 'PUT' : 'POST';
+
+      return apiFetch(method, url, {
+          provider: keyData.provider,
+          name: keyData.name,
+          key: keyData.key,
+      })
+    },
     onSuccess: () => {
       // Invalidate the 'apiKeys' query to refetch the list after saving
       queryClient.invalidateQueries({ queryKey: ['apiKeys'] });

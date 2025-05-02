@@ -3,6 +3,8 @@ import { ApiKeyManagerModal } from './ApiKeyManagerModal';
 import { McpConfigModal } from './McpConfigModal';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { apiFetch } from '../../util/api';
+import { useNavigate } from 'react-router-dom';
 
 interface McpConfig {
   id: string;
@@ -10,36 +12,22 @@ interface McpConfig {
   url: string;
 }
 
-const logoutUser = async () => {
-  // Call the backend logout endpoint
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/logout`, {
-    method: 'POST',
-  });
-
-  if (!response.ok) {
-    throw new Error('Logout failed');
-  }
-};
-
 export function SettingsButton() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isMcpConfigModalOpen, setIsMcpConfigModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [mcpConfigs, setMcpConfigs] = useState<McpConfig[]>([]);
+  const navigate = useNavigate();
   const auth = useAuth();
 
   // Use useMutation for logout
   const logoutMutation = useMutation<void, Error>({
-    mutationFn: async () => {
-     await logoutUser();
-      auth.logout();
-    },
+    mutationFn: async () => apiFetch( 'POST', '/api/v1/auth/logout'),
     onSuccess: () => {
       // Clear the token from local storage
-      localStorage.removeItem('authToken'); // Use 'authToken' as used in App.tsx
+      auth.logout();
 
-      // Redirect to the login page
-      window.location.href = '/login';
+      navigate('/login');
     },
     onError: (error) => {
       console.error('Logout failed:', error);
