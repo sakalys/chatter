@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Body # Imp
 
 from app.core.dependencies import DB, get_current_user
 from app.models.user import User
-from app.services.api_key import get_api_key_by_id
+from app.services.api_key import get_users_api_key_by_id
 from app.services.chat import handle_chat_request
 from pydantic import BaseModel
 
@@ -51,7 +51,7 @@ async def generate_chat_response(
         )
 
     # Check if API key exists and belongs to user
-    api_key = await get_api_key_by_id(db, api_key_uuid, current_user.id)
+    api_key = await get_users_api_key_by_id(db, api_key_uuid, current_user.id)
     if not api_key:
         logger.error(f"API key not found for ID: {api_key_uuid}") # Log error
         raise HTTPException(

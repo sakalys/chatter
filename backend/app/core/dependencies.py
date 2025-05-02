@@ -62,27 +62,3 @@ async def get_current_user(
         )
     
     return user
-
-
-async def get_current_active_superuser(
-    current_user: Annotated[User, Depends(get_current_user)]
-) -> User:
-    """
-    Get the current user and verify they are a superuser.
-    
-    Args:
-        current_user: Current user from token
-        
-    Returns:
-        User object
-        
-    Raises:
-        HTTPException: If user is not a superuser
-    """
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    
-    return current_user

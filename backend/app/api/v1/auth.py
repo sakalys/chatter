@@ -12,8 +12,8 @@ from app.core.config import settings
 from app.core.dependencies import DB, get_current_user
 from app.core.security import create_access_token
 from app.schemas.auth import Token
-from app.schemas.user import UserCreate, UserResponse
-from app.services.user import authenticate_user, create_user, get_user_by_email
+from app.schemas.user import UserCreate
+from app.services.user import create_user, get_user_by_email
 from app.models.user import User
 
 router = APIRouter()

@@ -9,7 +9,7 @@ from app.schemas.api_key import ApiKeyCreate, ApiKeyResponse, ApiKeyUpdate
 from app.services.api_key import (
     create_api_key,
     delete_api_key,
-    get_api_key_by_id,
+    get_users_api_key_by_id,
     get_api_keys_by_user,
     update_api_key,
 )
@@ -53,7 +53,7 @@ async def read_api_key(
     """
     Get a specific API key by id.
     """
-    api_key = await get_api_key_by_id(db, api_key_id, current_user.id)
+    api_key = await get_users_api_key_by_id(db, api_key_id, current_user.id)
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -72,7 +72,7 @@ async def update_user_api_key(
     """
     Update a specific API key.
     """
-    api_key = await get_api_key_by_id(db, api_key_id, current_user.id)
+    api_key = await get_users_api_key_by_id(db, api_key_id, current_user.id)
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -92,7 +92,7 @@ async def delete_user_api_key(
     """
     Delete a specific API key.
     """
-    api_key = await get_api_key_by_id(db, api_key_id, current_user.id)
+    api_key = await get_users_api_key_by_id(db, api_key_id, current_user.id)
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

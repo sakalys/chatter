@@ -18,7 +18,7 @@ from app.models.message import Message
 from app.models.mcp_config import MCPConfig
 from app.models.mcp_tool_use import MCPToolUse, ToolUseState
 from app.schemas.user import UserCreate
-from app.services.user import create_user, get_user_by_email
+from app.services.user import create_user
 from app.services.api_key import create_api_key
 from app.schemas.api_key import ApiKeyCreate
 from app.services.mcp_config import create_mcp_config, create_mcp_tool

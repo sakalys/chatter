@@ -3,7 +3,7 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.user import UserCreate
-from app.services.user import authenticate_user, create_user, get_user_by_email
+from app.services.user import create_user, get_user_by_email
 
 
 @pytest_asyncio.fixture
@@ -32,7 +32,6 @@ async def test_create_user(test_db: AsyncSession):
     assert user.full_name == user_in.full_name
     assert user.hashed_password != user_in.password  # Password should be hashed
     assert user.is_active is True
-    assert user.is_superuser is False
 
 
 @pytest.mark.asyncio
@@ -50,31 +49,5 @@ async def test_get_user_by_email(test_db: AsyncSession, test_user):
 async def test_get_user_by_email_not_found(test_db: AsyncSession):
     """Test getting a user by email that doesn't exist."""
     user = await get_user_by_email(test_db, "nonexistent@example.com")
-    
-    assert user is None
-
-
-@pytest.mark.asyncio
-async def test_authenticate_user_success(test_db: AsyncSession, test_user):
-    """Test authenticating a user with correct credentials."""
-    user = await authenticate_user(test_db, test_user.email, "testpassword")
-    
-    assert user is not None
-    assert user.id == test_user.id
-    assert user.email == test_user.email
-
-
-@pytest.mark.asyncio
-async def test_authenticate_user_wrong_password(test_db: AsyncSession, test_user):
-    """Test authenticating a user with wrong password."""
-    user = await authenticate_user(test_db, test_user.email, "wrongpassword")
-    
-    assert user is None
-
-
-@pytest.mark.asyncio
-async def test_authenticate_user_not_found(test_db: AsyncSession):
-    """Test authenticating a user that doesn't exist."""
-    user = await authenticate_user(test_db, "nonexistent@example.com", "testpassword")
     
     assert user is None

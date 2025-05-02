@@ -46,12 +46,7 @@ A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. U
    ./scripts/copy-scripts.sh
    ```
 
-3. Create a superuser (optional):
-   ```bash
-   docker compose exec backend python scripts/create-superuser.py
-   ```
-
-4. Access the application:
+3. Access the application:
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs

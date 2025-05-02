@@ -34,7 +34,7 @@ async def get_api_keys_by_user(
     return result.scalars().all()
 
 
-async def get_api_key_by_id(
+async def get_users_api_key_by_id(
     db: AsyncSession, 
     api_key_id: UUID, 
     user_id: UUID

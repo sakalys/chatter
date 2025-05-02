@@ -76,7 +76,6 @@ async def _generate_google_response(
         types.Tool(
             function_declarations=[
                 {
-                    # "id": str(tool.id), # does not work
                     "name": tool.name,
                     "description": tool.description,
                     "parameters": {

@@ -14,11 +14,6 @@ interface ApiKey {
   key?: string;
 }
 
-const saveApiKey = async (): Promise<ApiKey> => {
-
-};
-
-
 export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps) {
   const queryClient = useQueryClient();
   const [openaiApiKey, setOpenaiApiKey] = useState('');

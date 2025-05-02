@@ -22,7 +22,6 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(nullable=False)
     full_name: Mapped[str | None] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
-    is_superuser: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     # Relationships
     api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user", cascade="all, delete-orphan")

@@ -23,5 +23,4 @@ class ApiKeyUpdate(BaseModel):
 class ApiKeyResponse(ApiKeyBase):
     """API key response schema."""
     id: UUID
-    user_id: UUID
     
