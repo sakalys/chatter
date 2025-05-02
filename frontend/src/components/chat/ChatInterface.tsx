@@ -99,8 +99,6 @@ export function ChatInterface({ }: ChatInterfaceProps) {
     }
   }, [conversationId, setNewChatState]);
 
-  console.log(messages.slice(-2).map(message =>  message.role))
-
 
   const handleSendMessage = async (content: string, toolDecision: boolean | null = null) => {
     // Prevent sending message if API keys are not loaded
