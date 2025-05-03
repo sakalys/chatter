@@ -188,7 +188,7 @@ async def _generate_openai_response(
 
     async for chunk in stream:
         if chunk.choices and chunk.choices[0].delta.content is not None:
-            yield chunk.choices[0].delta.content
+            yield StreamEvent("text", chunk.choices[0].delta.content)
 
 async def generate_chat_response(
     user: User, # Added user parameter
