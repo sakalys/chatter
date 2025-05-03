@@ -179,9 +179,28 @@ async def _generate_openai_response(
 
     client = AsyncOpenAI(api_key=api_key)
 
+    # Format messages for Google's API
+    formatted_messages: list[Any] = []
+    for msg in messages:
+        if "content" in msg:
+            if msg["role"] == "user":
+                formatted_messages.append({"role": "user", "content": msg["content"]})
+            elif msg["role"] == "assistant":
+                formatted_messages.append({"role": "assistant", "content": msg["content"]})
+            elif msg["role"] == "system":
+                formatted_messages.append({"role": "user", "content": f"System: {msg['content']}"})
+            elif msg["role"] == "function_call":
+                formatted_messages.append({"role": "assistant", "content": f"""
+                The user approved a previous tool call and following is the result of the tool call:
+                <tool_call>
+                    {msg['content']}
+                </tool_call>
+                Proceed with the user's request.
+"""})
+
     stream = await client.chat.completions.create(
         model=model,
-        messages=messages,
+        messages=formatted_messages,
         stream=True,
         tools=tools, # Pass the formatted tools
     )
