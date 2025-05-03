@@ -101,11 +101,11 @@ async def _generate_google_response(
                 formatted_messages.append({"role": "user", "parts": [{"text": f"System: {msg['content']}"}]})
             elif msg["role"] == "function_call":
                 formatted_messages.append({"role": "model", "parts": [{"text": f"""
-                The user approved a previous tool call and following is the result of the tool call:
-                <tool_call>
-                    {msg['content']}
-                </tool_call>
-                Proceed with the user's request.
+The user approved a previous tool call and following is the result of the tool call:
+<tool_call>
+    {msg['content']}
+</tool_call>
+Proceed with the user's request.
 """}]})
         else:
             logger.warning(f"Message missing 'content' key: {msg}")
@@ -191,11 +191,11 @@ async def _generate_openai_response(
                 formatted_messages.append({"role": "user", "content": f"System: {msg['content']}"})
             elif msg["role"] == "function_call":
                 formatted_messages.append({"role": "assistant", "content": f"""
-                The user approved a previous tool call and following is the result of the tool call:
-                <tool_call>
-                    {msg['content']}
-                </tool_call>
-                Proceed with the user's request.
+The user approved a previous tool call and following is the result of the tool call:
+<tool_call>
+    {msg['content']}
+</tool_call>
+Proceed with the user's request.
 """})
 
     stream = await client.chat.completions.create(
