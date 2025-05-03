@@ -22,7 +22,7 @@ export function SettingsButton() {
 
   // Use useMutation for logout
   const logoutMutation = useMutation<void, Error>({
-    mutationFn: async () => apiFetch( 'POST', '/api/v1/auth/logout'),
+    mutationFn: async () => apiFetch( 'POST', '/auth/logout'),
     onSuccess: () => {
       // Clear the token from local storage
       auth.logout();

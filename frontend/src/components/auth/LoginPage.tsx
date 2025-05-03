@@ -93,28 +93,43 @@ const LoginPage: React.FC = () => {
 
 
   return (
-    <div className="flex items-center justify-center min-h-full bg-gradient-to-br from-gray-900 to-black p-6">
-      <div className="relative px-8 py-10 bg-gray-800 bg-opacity-70 backdrop-filter backdrop-blur-lg shadow-2xl rounded-xl w-full max-w-md border border-gray-700">
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-extrabold text-white mb-3 tracking-tight">Moo Point</h1>
-          <h3 className="text-xl font-semibold text-gray-300">Login to your account</h3>
-        </div>
-        <div className="flex flex-col items-center space-y-4">
-          <GoogleLogin
-            onSuccess={handleGoogleLoginSuccess}
-            onError={handleGoogleLoginError}
-          />
-          {isDevelopment && (
-            <button
-              onClick={handleQuickLoginClick}
-              className="text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isLoading}
-            >
-              {quickLoginMutation.isPending ? 'Logging in...' : 'Quick test login (dev only)'}
-            </button>
-          )}
+    <div className='flex flex-col sm:flex-row h-full'>
+      <div className="bg-white sm:flex-1 flex items-center justify-center">
+        <div className="shadow-md p-4 py-8 text-center">
+          <div className="">
+            <h1 className="text-2xl font-bold mb-4">Welcome</h1>
+            <p className="text-gray-600">We have the following soon-to-be-fixed limitations right now:</p>
+            <ul className="list-disc list-inside mt-4">
+              <li className="text-gray-600">OpenAI models do not support MCP</li>
+              <li className="text-gray-600">Anthropic's models do not work</li>
+            </ul>
+          </div>
         </div>
       </div>
+      <div className="flex sm:flex-2 items-center justify-center grow bg-gradient-to-br from-gray-900 to-black p-6">
+        <div className="relative px-8 py-10 bg-gray-800 bg-opacity-70 backdrop-filter backdrop-blur-lg shadow-2xl rounded-xl w-full max-w-md border border-gray-700">
+          <div className="text-center mb-8">
+            <h1 className="text-5xl font-extrabold text-white mb-3 tracking-tight">Moo Point</h1>
+            <h3 className="text-xl font-semibold text-gray-300">Login to your account</h3>
+          </div>
+          <div className="flex flex-col items-center space-y-4">
+            <GoogleLogin
+              onSuccess={handleGoogleLoginSuccess}
+              onError={handleGoogleLoginError}
+            />
+            {isDevelopment && (
+              <button
+                onClick={handleQuickLoginClick}
+                className="text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading}
+              >
+                {quickLoginMutation.isPending ? 'Logging in...' : 'Quick test login (dev only)'}
+              </button>
+            )}
+          </div>
+        </div>
+    </div>
+
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, Navigate, Outlet, RouterProvider, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Outlet, RouterProvider, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css'
@@ -68,6 +68,7 @@ export const AnonymousOnly = () => {
 };
 
 const TopMostWrapper = () => {
+  const location = useLocation();
   return (
     <div className="flex flex-col h-screen">
       <div className="bg-yellow-200 text-yellow-800 text-center p-2">
