@@ -25,7 +25,6 @@ export function MainLayout({ children }: PropsWithChildren) {
   return (
     <NewConversationContext.Provider value={{ newChatState, setNewChatState, refetchConversations: refetch }}>
     <div className="flex h-full bg-gray-100">
-      <LlmProvider>
           {/* Sidebar */}
           <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -66,7 +65,6 @@ export function MainLayout({ children }: PropsWithChildren) {
           <div className="flex-1 flex flex-col h-full relative">
             {children} {/* Render children */}
           </div>
-      </LlmProvider>
     </div>
     </NewConversationContext.Provider >
   );

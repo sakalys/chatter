@@ -131,3 +131,7 @@ export const AVAILABLE_MODELS: Model[] = [
     requiresApiKey: true
   }
 ];
+
+export function findModelById(id: string): Model | null {
+  return AVAILABLE_MODELS.find(model => model.id === id) || null;
+}

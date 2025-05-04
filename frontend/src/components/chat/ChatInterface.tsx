@@ -1,17 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS } from '../../types';
+import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById } from '../../types';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, apiFetchStreaming } from '../../util/api';
 import { useNewConversation } from '../../context/NewConversationContext';
-
-interface ChatInterfaceProps {
-}
 
 const fetchMessages = async (conversationId: string | undefined): Promise<Message[]> => {
   if (!conversationId) {
@@ -25,11 +22,9 @@ const fetchApiKeys = async (): Promise<ApiKey[]> => {
 };
 
 
-export function ChatInterface({ }: ChatInterfaceProps) {
+export function ChatInterface() {
   const { id: routeConversationId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-
   const [conversationId, setConversationId] = useState<string | undefined>(routeConversationId);
   const [messages, setMessages] = useState<(Message)[]>([]);
   const [outgoingMessage, setOutgoingMessage] = useState<MessageCreate | null>(null);
@@ -37,12 +32,24 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [showNoModelsOverlay, setShowNoModelsOverlay] = useState(false);
-  const [conversationTitle, setConversationTitle] = useState<string>('New Conversation');
-  const [selectedModel, setSelectedModel] = useState<Model>(AVAILABLE_MODELS[0]); // Default to the first model
+  const [selectedModel, setSelectedModel] = useState<Model>(() => {
+    const storedModelId = localStorage.getItem('selectedModelId');
+    const model = storedModelId ? findModelById(storedModelId) : null;
+    return model || AVAILABLE_MODELS[0]; // Default to stored model or the first available
+  });
   const { setNewChatState, refetchConversations } = useNewConversation(); // Consume context and setter
 
+  // Effect to save selected model to localStorage
+  useEffect(() => {
+    if (selectedModel) {
+      localStorage.setItem('selectedModelId', selectedModel.id);
+    } else {
+      localStorage.removeItem('selectedModelId');
+    }
+  }, [selectedModel]);
+
   // Fetch messages using React Query
-  const { data: fetchedMessages, error: messagesError, isLoading: isLoadingMessages } = useQuery<Message[], Error>({
+  const { data: fetchedMessages, isLoading: isLoadingMessages } = useQuery<Message[], Error>({
     queryKey: ['messages', conversationId],
     queryFn: () => fetchMessages(conversationId),
     enabled: true, // Always enabled, fetchMessages handles the conversationId logic
@@ -50,7 +57,7 @@ export function ChatInterface({ }: ChatInterfaceProps) {
   });
 
   // Fetch API keys using React Query
-  const { data: apiKeys, error: apiKeysError, isLoading: isLoadingApiKeys } = useQuery<ApiKey[], Error>({
+  const { data: apiKeys, isLoading: isLoadingApiKeys } = useQuery<ApiKey[], Error>({
     queryKey: ['apiKeys'],
     queryFn: fetchApiKeys,
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
@@ -230,7 +237,6 @@ export function ChatInterface({ }: ChatInterfaceProps) {
             } else if (eventType === 'conversation_title_updated' && typeof eventData === 'string') {
               console.log('conversation_title_updated');
               // Update the conversation title state
-              setConversationTitle(eventData);
             }
 
           });
