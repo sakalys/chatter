@@ -201,9 +201,52 @@ async def _generate_openai_response(
         tools=tools, # Pass the formatted tools
     )
 
+    unfinished_call = None
+
     async for chunk in stream:
-        if chunk.choices and chunk.choices[0].delta.content is not None:
+        if not chunk.choices:
+            continue
+
+        if chunk.choices[0].delta.tool_calls:
+
+            tool_call = chunk.choices[0].delta.tool_calls[0]
+
+            # having an id, indicates a new function call
+            if tool_call.id is not None:
+                if unfinished_call is not None:
+                    # if we have an incomplete call, we need to yield it
+                    call = FunctionCall(
+                        name=unfinished_call["name"],
+                        arguments=json.loads(unfinished_call["arguments"]),
+                    )
+                    yield StreamEvent("function_call", json.dumps(call.model_dump()))
+
+                unfinished_call = {
+                    "name": "",
+                    "arguments": "",
+                }
+
+            function_call = tool_call.function
+
+            if function_call is not None:
+                if unfinished_call is None:
+                    raise ValueError("Previous buffered call must be set before accessing function_call")
+
+                if function_call.name:
+                    unfinished_call["name"] = function_call.name
+
+                unfinished_call["arguments"] += function_call.arguments or ""
+        
+        if chunk.choices[0].delta.content is not None:
             yield StreamEvent("text", chunk.choices[0].delta.content)
+
+    if unfinished_call is not None and unfinished_call["name"] != "":
+        call = FunctionCall(
+            name=unfinished_call["name"],
+            arguments=json.loads(unfinished_call["arguments"]),
+        )
+        yield StreamEvent("function_call", json.dumps(call.model_dump()))
+        unfinished_call = None
 
 async def generate_chat_response(
     user: User, # Added user parameter

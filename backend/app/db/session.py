@@ -24,8 +24,8 @@ async def get_db() -> AsyncIterator[AsyncSession]:
     async with async_session_factory() as session:
         try:
             yield session
-        except Exception:
+        except Exception as e:
             await session.rollback()
-            raise
+            raise e
         finally:
             await session.close()
