@@ -83,19 +83,18 @@ async def create_openai_api_key(db: AsyncSession, user: User) -> None:
     # Create the API key
     api_key_in = ApiKeyCreate(
         provider="openai",
-        name="OpenAI API Key",
         key=api_key,
     )
     
     await create_api_key(db, api_key_in, user.id)
     print("Created OpenAI API key for test user")
 
-async def create_google_api_key(db: AsyncSession, user: User) -> None:
+async def create_gemini_api_key(db: AsyncSession, user: User) -> None:
     # Read the API key from the gitignored file
-    api_key_path = Path(__file__).parent / "google_api_key.txt"
+    api_key_path = Path(__file__).parent / "gemini_api_key.txt"
     if not api_key_path.exists():
         print(f"Error: API key file not found at {api_key_path}")
-        print("Please create the file with your Google API key")
+        print("Please create the file with your gemini API key")
         return
     
     api_key = api_key_path.read_text().strip()
@@ -105,13 +104,12 @@ async def create_google_api_key(db: AsyncSession, user: User) -> None:
     
     # Create the API key
     api_key_in = ApiKeyCreate(
-        provider="google",
-        name="Google API Key",
+        provider="gemini",
         key=api_key,
     )
     
     await create_api_key(db, api_key_in, user.id)
-    print("Created Google API key for test user")
+    print("Created gemini API key for test user")
 
 async def create_example_conversation(db: AsyncSession, user: User, tool: MCPTool) -> None:
     """Create an example conversation with messages for the test user."""
@@ -214,24 +212,18 @@ async def main():
     )
     
     async with async_session() as db:
-        # Clean up existing data
         await cleanup_database(db)
         
-        # Create test user
         user = await create_test_user(db)
         
-        # Create Google API key
-        await create_google_api_key(db, user)
+        await create_gemini_api_key(db, user)
 
-        # Create OpenAI API key
         await create_openai_api_key(db, user)
         
-        # Create MCP config fixture
         mcp_config = await create_mcp_config_fixture(db, user)
 
         tools = await create_mcp_tool_fixtures(db, mcp_config)
 
-        # Create example conversation
         await create_example_conversation(db, user, tools[0])
 
     print("Fixtures creation completed!")

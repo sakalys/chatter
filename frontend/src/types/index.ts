@@ -53,7 +53,7 @@ export interface McpTool {
 export interface Model {
   id: string;
   name: string;
-  provider: string;
+  provider: LLMProvider
   description: string;
   requiresApiKey: boolean;
 }
@@ -70,71 +70,77 @@ export interface ChatCompletionResponse {
   message: Message;
 }
 
+export enum LLMProvider {
+  Gemini = 'gemini',
+  OpenAI = 'openai',
+  Anthropic = 'anthropic',
+  XAi = 'xai',
+}
 
 export const AVAILABLE_MODELS: Model[] = [
   {
     id: 'gemini-2.5-flash-preview-04-17',
     name: 'Gemini 2.5 Flash',
-    provider: 'google',
+    provider: LLMProvider.Gemini,
     description: 'Google\'s fastest Gemini model',
     requiresApiKey: true
   },
   {
     id: 'gemini-2.0-flash',
     name: 'Gemini 2.0 Flash',
-    provider: 'google',
+    provider: LLMProvider.Gemini,
     description: 'Google\'s efficient Gemini model',
     requiresApiKey: true
   },
   {
     id: 'gemini-2.5-pro-preview-03-25',
     name: 'Gemini 2.5 Pro',
-    provider: 'google',
+    provider: LLMProvider.Gemini,
     description: 'Google\'s advanced Gemini model',
     requiresApiKey: true
   },
   {
     id: 'gpt-4.1',
     name: 'GPT-4.1',
-    provider: 'openai',
+    provider: LLMProvider.OpenAI,
     description: 'OpenAI\'s model with advanced capabilities',
     requiresApiKey: true
   },
   {
     id: 'gpt-3.5-turbo',
     name: 'GPT-3.5 Turbo',
-    provider: 'openai',
+    provider: LLMProvider.OpenAI,
     description: '',
     requiresApiKey: true
   },
   {
     id: 'claude-3-7-sonnet-latest',
     name: 'Claude 3.7 Sonnet',
-    provider: 'anthropic',
+    provider: LLMProvider.Anthropic,
     description: '',
     requiresApiKey: true
   },
   {
     id: 'claude-3-5-sonnet-latest',
     name: 'Claude 3.5 Sonnet',
-    provider: 'anthropic',
+    provider: LLMProvider.Anthropic,
     description: '',
     requiresApiKey: true
   },
   {
     id: 'claude-3-5-haiku-latest',
     name: 'Claude 3.5 Haiku',
-    provider: 'anthropic',
+    provider: LLMProvider.Anthropic,
     description: '',
     requiresApiKey: true
   },
   {
-    id: 'llama-3-70b',
-    name: 'Llama 3 (70B)',
-    provider: 'meta',
-    description: 'Meta\'s largest open model',
+    id: 'grok-3-latest',
+    name: 'Grok 3',
+    provider: LLMProvider.XAi,
+    description: '',
     requiresApiKey: true
-  }
+  },
 ];
 
 export function findModelById(id: string): Model | null {

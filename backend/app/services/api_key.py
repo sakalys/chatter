@@ -80,7 +80,6 @@ async def create_api_key(
         user_id=user_id,
         provider=api_key_in.provider,
         key_reference=key_reference,
-        name=api_key_in.name,
     )
     db.add(api_key)
     await db.commit()

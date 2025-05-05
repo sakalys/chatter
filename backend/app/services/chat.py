@@ -7,6 +7,7 @@ from app.models.mcp_tool_use import ToolUseState
 from litellm import acompletion
 
 from fastapi import HTTPException, status
+from openai import AuthenticationError
 from sse_starlette.sse import EventSourceResponse
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -31,7 +32,7 @@ class StreamEvent:
     event: str
     data: str
 
-    def __init__(self, event: Union[Literal["text"], Literal["function_call"]], data: str):
+    def __init__(self, event: Union[Literal["text"], Literal["function_call"], Literal["auth_error"]], data: str):
         self.event = event
         self.data = data
 
@@ -66,9 +67,6 @@ async def _generate_litellm_response(
         Streaming response 
     """
 
-    if provider == "google":
-        provider = "gemini"
-
     # Convert MCP tools to OpenAI tools format
     tools = []
     for tool in mcp_tools:
@@ -86,7 +84,6 @@ async def _generate_litellm_response(
         }
         tools.append(openai_tool)
 
-    # Format messages for Google's API
     formatted_messages: list[Any] = []
     for msg in messages:
         if "content" in msg:
@@ -109,60 +106,63 @@ async def _generate_litellm_response(
     #     stream=True,
     #     tools=tools, # Pass the formatted tools
     # )
-    stream = await acompletion(
-        stream=True,
-        model=provider+"/"+model,
-        messages=formatted_messages,
-        tools=tools,
-        api_key=api_key,
-    )
-
-    unfinished_call = None
-
-    async for chunk in stream:
-        if not chunk.choices:
-            continue
-
-        if chunk.choices[0].delta.tool_calls:
-
-            tool_call = chunk.choices[0].delta.tool_calls[0]
-
-            # having an id, indicates a new function call
-            if tool_call.id is not None:
-                if unfinished_call is not None:
-                    # if we have an incomplete call, we need to yield it
-                    call = FunctionCall(
-                        name=unfinished_call["name"],
-                        arguments=json.loads(unfinished_call["arguments"]),
-                    )
-                    yield StreamEvent("function_call", json.dumps(call.model_dump()))
-
-                unfinished_call = {
-                    "name": "",
-                    "arguments": "",
-                }
-
-            function_call = tool_call.function
-
-            if function_call is not None:
-                if unfinished_call is None:
-                    raise ValueError("Previous buffered call must be set before accessing function_call")
-
-                if function_call.name:
-                    unfinished_call["name"] = function_call.name
-
-                unfinished_call["arguments"] += function_call.arguments or ""
-        
-        if chunk.choices[0].delta.content is not None:
-            yield StreamEvent("text", chunk.choices[0].delta.content)
-
-    if unfinished_call is not None and unfinished_call["name"] != "":
-        call = FunctionCall(
-            name=unfinished_call["name"],
-            arguments=json.loads(unfinished_call["arguments"]),
+    try:
+        stream = await acompletion(
+            stream=True,
+            model=provider+"/"+model,
+            messages=formatted_messages,
+            tools=tools,
+            api_key=api_key,
         )
-        yield StreamEvent("function_call", json.dumps(call.model_dump()))
+
         unfinished_call = None
+
+        async for chunk in stream:
+            if not chunk.choices:
+                continue
+
+            if chunk.choices[0].delta.tool_calls:
+
+                tool_call = chunk.choices[0].delta.tool_calls[0]
+
+                # having an id, indicates a new function call
+                if tool_call.id is not None:
+                    if unfinished_call is not None:
+                        # if we have an incomplete call, we need to yield it
+                        call = FunctionCall(
+                            name=unfinished_call["name"],
+                            arguments=json.loads(unfinished_call["arguments"]),
+                        )
+                        yield StreamEvent("function_call", json.dumps(call.model_dump()))
+
+                    unfinished_call = {
+                        "name": "",
+                        "arguments": "",
+                    }
+
+                function_call = tool_call.function
+
+                if function_call is not None:
+                    if unfinished_call is None:
+                        raise ValueError("Previous buffered call must be set before accessing function_call")
+
+                    if function_call.name:
+                        unfinished_call["name"] = function_call.name
+
+                    unfinished_call["arguments"] += function_call.arguments or ""
+            
+            if chunk.choices[0].delta.content is not None:
+                yield StreamEvent("text", chunk.choices[0].delta.content)
+
+        if unfinished_call is not None and unfinished_call["name"] != "":
+            call = FunctionCall(
+                name=unfinished_call["name"],
+                arguments=json.loads(unfinished_call["arguments"]),
+            )
+            yield StreamEvent("function_call", json.dumps(call.model_dump()))
+            unfinished_call = None
+    except AuthenticationError:
+        yield StreamEvent("auth_error", "")
 
 async def generate_chat_response(
     user: User, # Added user parameter
@@ -179,7 +179,7 @@ async def generate_chat_response(
         messages: List of messages in the conversation
         model: Model to use for generation
         api_key: Decrypted API key string
-        provider: Provider name (openai, anthropic, or google)
+        provider: Provider name (openai, anthropic, gemini, etc)
         
     Returns:
         Response from the LLM provider or streaming response object
@@ -336,7 +336,13 @@ async def handle_chat_request(
 
             content = ""
             async for event in response:
-                if event.event == "function_call":
+                if event.event == "auth_error":
+                    yield {
+                        "event": "auth_error",
+                        "data": ""
+                    }
+
+                elif event.event == "function_call":
                     # Handle function call event
                     logger.debug(f"Function call event: {event.data}")
                     data = json.loads(event.data)

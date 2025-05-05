@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../util/api';
+import { LLMProvider } from '../../types';
 
 interface ApiKeyManagerModalProps {
   isOpen: boolean;
@@ -10,15 +11,12 @@ interface ApiKeyManagerModalProps {
 interface ApiKey {
   id?: string;
   provider: string;
-  name?: string;
   key?: string;
 }
 
 export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps) {
   const queryClient = useQueryClient();
-  const [openaiApiKey, setOpenaiApiKey] = useState('');
-  const [anthropicApiKey, setAnthropicApiKey] = useState('');
-  const [googleApiKey, setGoogleApiKey] = useState('');
+  const [editingProvider, setEditingProvider] = useState<{id: string | null, provider: string, key: string} | null>(null);
 
   // Fetch existing API keys using useQuery
   const { data: existingKeys, isLoading: isLoadingKeys, error: fetchError } = useQuery<ApiKey[], Error>({
@@ -37,79 +35,53 @@ export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps)
 
       return apiFetch(method, url, {
           provider: keyData.provider,
-          name: keyData.name,
           key: keyData.key,
       })
     },
     onSuccess: () => {
+      setEditingProvider(null);
       // Invalidate the 'apiKeys' query to refetch the list after saving
       queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
     },
   });
 
-  // Populate input fields when existingKeys are loaded
-  useEffect(() => {
-    if (existingKeys) {
-      const openaiKey = existingKeys.find(key => key.provider === 'openai');
-      if (openaiKey) setOpenaiApiKey('********');
-
-      const anthropicKey = existingKeys.find(key => key.provider === 'anthropic');
-      if (anthropicKey) setAnthropicApiKey('********');
-
-      const googleKey = existingKeys.find(key => key.provider === 'google');
-      if (googleKey) setGoogleApiKey('********');
-    }
-  }, [existingKeys]);
+  // Use useMutation for deleting API keys
+  const deleteApiKeyMutation = useMutation<void, Error, string>({
+    mutationFn: (keyId: string) => {
+      return apiFetch('DELETE', `/api-keys/${keyId}`);
+    },
+    onSuccess: () => {
+      // Invalidate the 'apiKeys' query to refetch the list after deletion
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
+    },
+  });
 
   const handleSaveKeys = async () => {
-    const keysToSave: ApiKey[] = [];
-
-    if (openaiApiKey && openaiApiKey !== '********') {
-      const existingOpenaiKey = existingKeys?.find(key => key.provider === 'openai');
-      keysToSave.push({
-        id: existingOpenaiKey?.id,
-        provider: 'openai',
-        name: 'OpenAI API Key',
-        key: openaiApiKey,
-      });
+    if (!editingProvider) {
+      return;
     }
 
-    if (anthropicApiKey && anthropicApiKey !== '********') {
-      const existingAnthropicKey = existingKeys?.find(key => key.provider === 'anthropic');
-      keysToSave.push({
-        id: existingAnthropicKey?.id,
-        provider: 'anthropic',
-        name: 'Anthropic API Key',
-        key: anthropicApiKey,
-      });
-    }
-
-    if (googleApiKey && googleApiKey !== '********') {
-      const existingGoogleKey = existingKeys?.find(key => key.provider === 'google');
-      keysToSave.push({
-        id: existingGoogleKey?.id,
-        provider: 'google',
-        name: 'Google API Key',
-        key: googleApiKey,
-      });
-    }
-
-    try {
-      // Use Promise.all to save all keys concurrently
-      await Promise.all(keysToSave.map(key => saveApiKeyMutation.mutateAsync(key)));
-      onClose();
-    } catch (error: any) {
-      // Error handling is done within the mutation, but we can catch here for a general message
-      console.error('Error saving API keys:', error);
-      // The mutation's onError callback or the individual mutation errors will handle specific messages
-    }
+     saveApiKeyMutation.mutate({
+        id: editingProvider.id || undefined,
+        provider: editingProvider.provider,
+        key: editingProvider.key,
+      })
   };
+
+  useEffect(() => {
+    if (!editingProvider?.provider) {
+      setEditingProvider(null);
+    }
+  }, [editingProvider?.provider])
 
   if (!isOpen) return null;
 
   const isLoading = isLoadingKeys || saveApiKeyMutation.isPending;
   const error = fetchError || saveApiKeyMutation.error;
 
+  const existingProviders = Array.from(existingKeys?.reduce((acc, curr) => acc.add(curr.provider), new Set<string>()) || new Set())
+
+  const providersToAdd = Object.values(LLMProvider).filter(item => !existingProviders.includes(item))
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -134,8 +106,11 @@ export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps)
           </svg>
         </button>
 
-        <div className="mt-3 text-center">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
+        <form className="mt-3 text-start" onSubmit={(e) => {
+          e.preventDefault();
+          handleSaveKeys()
+        }}>
+          <h3 className="text-lg leading-6 font-medium text-gray-900 text-center">
             Manage API Keys
           </h3>
 
@@ -145,75 +120,124 @@ export function ApiKeyManagerModal({ isOpen, onClose }: ApiKeyManagerModalProps)
             </div>
           )}
 
-          <div className="mt-2 px-7 py-3">
-            <p className="text-sm text-gray-600 mb-4 text-left">
-              Enter or update your API keys for the supported language model providers.
-              Existing keys are masked. To update a key, type the new key over the masked value.
-            </p>
+{!editingProvider && (
+  <div>
+          <div className="mt-2 rounded-md mb-4">
+            {!existingKeys ? (
+              <>Loading...</>
+            )
+            : existingKeys.length === 0 ? (
+              <div className="text-gray-500">No API keys provided yet.</div>
+            )
+            : (
+              existingKeys.map(key => (
+                <div key={key.provider} className="mb-2 p-2 border border-zinc-100 rounded bg-white shadow-sm flex flex-row justify-between">
+                  <div>{key.provider}</div>
+                  <div>
+                    <button
+                      className='text-blue-500 hover:underline'
+                      onClick={() => {
+                        if (key.id && confirm("Are you sure?")) {
+                          deleteApiKeyMutation.mutate(key.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+              )}
 
-            <div className="mb-4">
-              <label htmlFor="openai-key" className="block text-sm font-medium text-gray-700 text-left">
-                OpenAI API Key
-                <span className="ml-2 text-xs font-normal text-gray-500">
-                  ({existingKeys?.find(key => key.provider === 'openai') ? 'Key set' : 'No key set'})
-                </span>
-              </label>
-              <input
-                type="password"
-                id="openai-key"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                value={openaiApiKey}
-                onChange={(e) => setOpenaiApiKey(e.target.value)}
-                placeholder="sk-..."
-              />
-            </div>
-
-            <div className="mb-4">
-              <label htmlFor="anthropic-key" className="block text-sm font-medium text-gray-700 text-left">
-                Anthropic API Key
-                <span className="ml-2 text-xs font-normal text-gray-500">
-                  ({existingKeys?.find(key => key.provider === 'anthropic') ? 'Key set' : 'No key set'})
-                </span>
-              </label>
-              <input
-                type="password"
-                id="anthropic-key"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                value={anthropicApiKey}
-                onChange={(e) => setAnthropicApiKey(e.target.value)}
-                placeholder="sk-ant-..."
-              />
-            </div>
-
-            <div className="mb-4">
-              <label htmlFor="google-key" className="block text-sm font-medium text-gray-700 text-left">
-                Google API Key
-                <span className="ml-2 text-xs font-normal text-gray-500">
-                  ({existingKeys?.find(key => key.provider === 'google') ? 'Key set' : 'No key set'})
-                </span>
-              </label>
-              <input
-                type="password"
-                id="google-key"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                value={googleApiKey}
-                onChange={(e) => setGoogleApiKey(e.target.value)}
-                placeholder="AIza..."
-              />
-            </div>
+            <button
+              id="save-keys-btn"
+              className="px-4 py-2 mb-2 border border-zinc-100 bg-zinc-50 text-black text-base font-medium rounded-md w-full shadow-sm hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading || providersToAdd.length === 0}
+              onClick={(e) => {
+                e.preventDefault()
+                  setEditingProvider({
+                    id: null,
+                    provider: providersToAdd[0],
+                    key: '',
+                  })
+              }}
+            >
+              Add
+            </button>
           </div>
 
-          <div className="items-center px-4 py-3">
             <button
               id="save-keys-btn"
               className="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSaveKeys}
               disabled={isLoading}
+              type="submit"
+              onClick={(e) => {
+                e.preventDefault()
+                onClose()
+              }}
             >
-              {isLoading ? 'Saving...' : 'Save Keys'}
+              Close
             </button>
           </div>
-        </div>
+)}
+
+          {editingProvider && <div className="items-center px-4 py-3">
+            <div className="py-4 text-start space-y-2">
+              <div className="py-4 text-start space-y-2">
+  <div>
+              <label>
+                Add Provider
+                <select 
+                  value={editingProvider.provider} 
+                  onChange={(e) => setEditingProvider({...editingProvider, provider: e.target.value})}
+                  className='border w-full bg-white'>
+                {providersToAdd.map(provider => (
+                  <option key={provider} value={provider}>{provider}</option>
+                ))}
+                </select>
+              </label>
+</div>
+
+<div>
+              <label>
+                API Key
+                <input type="password" value={editingProvider.key} className='border w-full bg-white' onChange={(e) => setEditingProvider({...editingProvider, key: e.target.value})}/>
+              </label>
+              </div>
+</div>
+
+            <button
+              id="save-keys-btn"
+              className="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading}
+              type="submit"
+              onClick={(e) => {
+                e.preventDefault();
+                  saveApiKeyMutation.mutate({
+                    ...editingProvider,
+                    id: undefined,
+                  })
+              }}
+            >
+              Save
+            </button>
+
+              
+            <button
+              id="save-keys-btn"
+              className="px-4 py-2 bg-zinc-50 text-black border border-zinc-200 text-base font-medium rounded-md w-full shadow-sm hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading}
+              onClick={(e) => {
+                e.preventDefault();
+                setEditingProvider(null);
+              }}
+            >
+              Cancel
+            </button>
+ 
+            </div>
+          </div>}
+        </form>
       </div>
     </div>
   );

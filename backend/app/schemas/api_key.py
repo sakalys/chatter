@@ -6,8 +6,6 @@ from pydantic import BaseModel
 class ApiKeyBase(BaseModel):
     """Base API key schema."""
     provider: str
-    name: str | None = None
-
 
 class ApiKeyCreate(ApiKeyBase):
     """API key creation schema."""

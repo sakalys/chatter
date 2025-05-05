@@ -73,28 +73,3 @@ async def generate_chat_response(
     logger.debug("Finished handle_chat_request") # Log after calling service
     
     return response
-
-
-@router.get("/models", response_model=dict[str, list[dict[str, str]]])
-async def list_available_models():
-    """
-    List available models for each provider.
-    """
-    return {
-        "openai": [
-            {"id": "gpt-4o", "name": "GPT-4o"},
-            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo"},
-            {"id": "gpt-4", "name": "GPT-4"},
-            {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo"},
-        ],
-        "anthropic": [
-            {"id": "claude-3-7-sonnet-latest", "name": "Claude 3.7 Sonnet"},
-            {"id": "claude-3-5-sonnet-latest", "name": "Claude 3.5 Sonnet"},
-            {"id": "claude-3-5-haiku-latest", "name": "Claude 3.5 Haiku"},
-        ],
-        "google": [
-            {"id": "gemini-2.5-flash-preview-04-17", "name": "Gemini 2.5 Flash"},
-            {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash"},
-            {"id": "gemini-2.5-pro-preview-03-25", "name": "Gemini 2.5 Pro"},
-        ],
-    }

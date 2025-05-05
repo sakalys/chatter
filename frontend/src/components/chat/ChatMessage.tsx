@@ -4,7 +4,7 @@ import { Nl2p } from './ChatInterface';
 import { MCPToolUse, Model } from '../../types';
 import { ToolCallMessage } from './ToolCallMessage';
 
-export type MessageRole = 'user' | 'assistant' | 'system' | 'function_call';
+export type MessageRole = 'user' | 'assistant' | 'system' | 'function_call' | 'auth_error';
 
 interface ChatMessageProps {
   id: string

@@ -252,6 +252,16 @@ export function ChatInterface() {
             } else if (eventType === 'conversation_title_updated' && typeof eventData === 'string') {
               console.log('conversation_title_updated');
               // Update the conversation title state
+            } else if (eventType === 'auth_error') {
+              const errorMessage: Message = {
+                id: `system-${Date.now()}-${messages.length + 1}`, // More unique key for errors
+                role: 'system',
+                content: `Error: API key error, possibly invalid`,
+                model: selectedModel.id,
+                mcp_tool_use: null,
+              };
+
+              setMessages([...messages, errorMessage]);
             }
 
           });

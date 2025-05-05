@@ -38,7 +38,7 @@ const quickLogin = async (): Promise<{ access_token: string }> => {
 };
 
 
-const LoginPage: React.FC = () => {
+const LoginPage = () => {
   const auth = useAuth();
   const navigate = useNavigate();
   const isDevelopment = import.meta.env.MODE === 'development';
@@ -90,7 +90,6 @@ const LoginPage: React.FC = () => {
   };
 
   const isLoading = googleLoginMutation.isPending || quickLoginMutation.isPending;
-
 
   return (
     <div className='flex flex-col sm:flex-row h-full'>

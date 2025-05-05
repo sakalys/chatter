@@ -13,6 +13,8 @@ from app.services.api_key import (
     get_api_keys_by_user,
     update_api_key,
 )
+from litellm import LiteLLM_Params
+from litellm.utils import check_valid_key, get_valid_models, validate_environment
 
 
 router = APIRouter()
@@ -37,6 +39,13 @@ async def create_user_api_key(
     current_user: Annotated[User, Depends(get_current_user)],
     db: DB,
 ):
+    # valid = check_valid_key(api_key_in.provider, api_key=api_key_in.key)
+    # if not valid:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="Key not valid",
+    #     )
+
     """
     Create a new API key for the current user.
     """
