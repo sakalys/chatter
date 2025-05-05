@@ -1,11 +1,12 @@
-import { PropsWithChildren, useState } from 'react';
-import { LlmProvider } from '../../context/LlmContext';
+import { PropsWithChildren, useState, KeyboardEvent } from 'react';
 import { NewChatState, NewConversationContext } from '../../context/NewConversationContext';
 import { SettingsButton } from '../ui/SettingsButton';
 import { Conversation } from '../../types';
 import { Link, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../util/api';
+import { Menu } from '@headlessui/react';
+import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
 
 const fetchConversations = async (): Promise<Conversation[]> => {
   return apiFetch<Conversation[]>('GET', '/conversations');
@@ -21,6 +22,43 @@ export function MainLayout({ children }: PropsWithChildren) {
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
   const [newChatState, setNewChatState] = useState<NewChatState>("no");
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editedTitle, setEditedTitle] = useState<string>('');
+
+  const queryClient = useQueryClient();
+
+  const updateConversationTitleMutation = useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) => {
+      return apiFetch('PUT', `/conversations/${id}`, { title });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+
+  const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setEditedTitle(event.target.value);
+  };
+
+  const handleTitleBlur = (conversationId: string) => {
+    if (editedTitle.trim() !== (conversations?.find(c => c.id === conversationId)?.title || '')) {
+      updateConversationTitleMutation.mutate({ id: conversationId, title: editedTitle.trim() });
+    }
+    setEditingConversationId(null);
+    setEditedTitle('');
+  };
+
+  const handleTitleKeyPress = (event: KeyboardEvent<HTMLInputElement>, conversationId: string) => {
+    if (event.key === 'Enter') {
+      handleTitleBlur(conversationId);
+    }
+  };
+
+  const handleRenameClick = (conversation: Conversation) => {
+    setEditingConversationId(conversation.id);
+    setEditedTitle(conversation.title || '');
+  };
+
 
   return (
     <NewConversationContext.Provider value={{ newChatState, setNewChatState, refetchConversations: refetch }}>
@@ -42,15 +80,59 @@ export function MainLayout({ children }: PropsWithChildren) {
                 {isLoading && <div className="text-gray-500">Loading conversations...</div>}
                 {error && <div className="text-red-500">Error: {error.message}</div>}
                 {!isLoading && !error && conversations?.map((conversation) => (
-                  <Link
+                  <div
                     key={conversation.id}
-                    to={`/chat/${conversation.id}`}
-                    className={`block w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 ${
+                    className={`relative flex items-center group ${
                       location.pathname === `/chat/${conversation.id}` ? 'bg-blue-50 text-blue-600' : ''
                     }`}
                   >
-                    <div className="font-medium truncate">{conversation.title || `Conversation ${conversation.id.substring(0, 8)}...`}</div>
-                  </Link>
+                    {editingConversationId === conversation.id ? (
+                      <input
+                        type="text"
+                        value={editedTitle}
+                        onChange={handleTitleChange}
+                        onBlur={() => handleTitleBlur(conversation.id)}
+                        onKeyPress={(e) => handleTitleKeyPress(e, conversation.id)}
+                        className="w-full bg-transparent outline-none border-none px-3 py-2 rounded-md"
+                        autoFocus
+                      />
+                    ) : (
+                      <Link
+                        to={`/chat/${conversation.id}`}
+                        className="flex-1 block w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 truncate"
+                      >
+                        <div className="font-medium truncate">
+                          {conversation.title || `Conversation ${conversation.id.substring(0, 8)}...`}
+                        </div>
+                      </Link>
+                    )}
+                    {!editingConversationId && (
+                      <Menu as="div" className="relative inline-block text-left">
+                        <div>
+                          <Menu.Button className="p-1 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100">
+                            <EllipsisVerticalIcon className="h-5 w-5" aria-hidden="true" />
+                          </Menu.Button>
+                        </div>
+                        <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                          <div className="py-1">
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button
+                                  className={`${
+                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                  } block w-full text-left px-4 py-2 text-sm`}
+                                  onClick={() => handleRenameClick(conversation)}
+                                >
+                                  Rename
+                                </button>
+                              )}
+                            </Menu.Item>
+                            {/* Add other options here later */}
+                          </div>
+                        </Menu.Items>
+                      </Menu>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
