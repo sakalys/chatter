@@ -4,10 +4,10 @@ import { MCPToolUse } from '../../types';
 interface ToolCallMessageProps {
   toolCall: MCPToolUse
   onDecision: (toolDecide: boolean) => void
-  isGenerating: boolean
+  disabled: boolean
 }
 
-export function ToolCallMessage({ toolCall, onDecision, isGenerating }: ToolCallMessageProps) {
+export function ToolCallMessage({ toolCall, onDecision, disabled }: ToolCallMessageProps) {
     const [isPending, setIsPending] = useState(toolCall.state === 'pending');
 
   return (
@@ -28,12 +28,12 @@ export function ToolCallMessage({ toolCall, onDecision, isGenerating }: ToolCall
             <button
               className="ml-2 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => onDecision(true)}
-              disabled={isGenerating}
+              disabled={disabled}
             >Approve</button>
             <button
               className="ml-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => onDecision(false)}
-              disabled={isGenerating}
+              disabled={disabled}
             >Reject</button>
           </>
         ) : (

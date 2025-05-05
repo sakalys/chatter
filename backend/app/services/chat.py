@@ -25,7 +25,7 @@ from app.models.message import Message
 from app.schemas.message import MessageCreate, ToolUseCreate
 from app.models.user import User # Import User model
 from app.services.api_key import decrypt_api_key
-from app.services.conversation import add_message_to_conversation, get_conversation_by_id, get_conversation_by_id_and_user_id, update_conversation
+from app.services.conversation import add_message_to_conversation, get_messages_by_conversation, get_conversation_by_id_and_user_id, update_conversation
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, MessageResponse
 
 logger = logging.getLogger(__name__) # Get logger
@@ -331,8 +331,10 @@ async def handle_chat_request(
                 detail="Conversation not found"
             )
 
+    created_user_message_id: str | None = None
+
     if tool_decision is None:
-        await add_message_to_conversation(
+        msg = await add_message_to_conversation(
             db,
             MessageCreate(
                 role="user",
@@ -341,10 +343,11 @@ async def handle_chat_request(
             ),
             conversation
         )
+
+        created_user_message_id = str(msg.id)
         logger.debug(f"Added user message to conversation: {conversation.id}")
     
     # Get all messages in the conversation
-    from app.services.conversation import get_messages_by_conversation
     messages = await get_messages_by_conversation(db, conversation.id)
     logger.debug(f"Retrieved {len(messages)} messages for conversation: {conversation.id}")
 
@@ -385,10 +388,10 @@ async def handle_chat_request(
                 formatted_messages.append({
                     "role": "assistant",
                     "content": f"""
-                    <tool_call_response>
-                    {result.content[0].text}
-                    </tool_call_response>
-                    """
+<tool_call_response>
+{result.content[0].text}
+</tool_call_response>
+"""
                 })
 
     try:
@@ -407,6 +410,12 @@ async def handle_chat_request(
         logger.debug(f"Finished generate_chat_response. Response type: {type(response)}")
             
         async def event_generator():
+            if created_user_message_id:
+                yield {
+                    "event": "user_message_id",
+                    "data": created_user_message_id
+                }
+
             # If it's a new conversation, send an initial event with the conversation ID
 
             if is_new_conversation:

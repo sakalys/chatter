@@ -2,7 +2,7 @@ import { PropsWithChildren, useState, KeyboardEvent } from 'react';
 import { NewChatState, NewConversationContext } from '../../context/NewConversationContext';
 import { SettingsButton } from '../ui/SettingsButton';
 import { Conversation } from '../../types';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../util/api';
 import { Menu } from '@headlessui/react';
@@ -26,6 +26,7 @@ export function MainLayout({ children }: PropsWithChildren) {
   const [editedTitle, setEditedTitle] = useState<string>('');
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const updateConversationTitleMutation = useMutation({
     mutationFn: ({ id, title }: { id: string; title: string }) => {
@@ -33,6 +34,18 @@ export function MainLayout({ children }: PropsWithChildren) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+
+  const deleteConversationMutation = useMutation({
+    mutationFn: (id: string) => {
+      return apiFetch('DELETE', `/conversations/${id}`);
+    },
+    onSuccess: (_, deletedConversationId) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      if (location.pathname === `/chat/${deletedConversationId}`) {
+        navigate('/');
+      }
     },
   });
 
@@ -57,6 +70,12 @@ export function MainLayout({ children }: PropsWithChildren) {
   const handleRenameClick = (conversation: Conversation) => {
     setEditingConversationId(conversation.id);
     setEditedTitle(conversation.title || '');
+  };
+
+  const handleDeleteClick = (conversationId: string) => {
+    if (window.confirm('Are you sure you want to delete this conversation?')) {
+      deleteConversationMutation.mutate(conversationId);
+    }
   };
 
 
@@ -127,7 +146,18 @@ export function MainLayout({ children }: PropsWithChildren) {
                                 </button>
                               )}
                             </Menu.Item>
-                            {/* Add other options here later */}
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button
+                                  className={`${
+                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                  } block w-full text-left px-4 py-2 text-sm`}
+                                  onClick={() => handleDeleteClick(conversation.id)}
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </Menu.Item>
                           </div>
                         </Menu.Items>
                       </Menu>

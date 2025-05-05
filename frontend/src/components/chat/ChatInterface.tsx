@@ -52,7 +52,6 @@ export function ChatInterface() {
   const { data: fetchedMessages, isLoading: isLoadingMessages } = useQuery<Message[], Error>({
     queryKey: ['messages', conversationId],
     queryFn: () => fetchMessages(conversationId),
-    enabled: true, // Always enabled, fetchMessages handles the conversationId logic
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
 
@@ -62,7 +61,6 @@ export function ChatInterface() {
     queryFn: fetchApiKeys,
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
-
 
   // Update messages state when fetchedMessages changes
   useEffect(() => {
@@ -211,15 +209,19 @@ export function ChatInterface() {
               // Assuming the data is the text chunk
               setIncomingMessage({ model: thisModel, message: message });
             } else if (eventType === 'message_done' && typeof eventData === 'string') {
-              console.log('message done');
               const message: Message = JSON.parse(eventData);
 
               setMessages(prev => [...prev, message]);
+
             } else if (eventType === 'function_call' && typeof eventData === 'string') {
-              console.log('function call');
               const message: Message = JSON.parse(eventData);
 
               setMessages(prev => [...prev, message]);
+            } else if (eventType === 'user_message_id' && typeof eventData === 'string') {
+              const messageId = eventData;
+              setOutgoingMessage(null)
+              setMessages([...messages, {role: 'user', model: thisModel.id, id: messageId, content: userMessage.content, mcp_tool_use: null }]);
+
             } else if (eventType === 'done') {
               // The stream is finished, no more data for this message
               setIsLoading(false); // Stop loading when done
@@ -260,13 +262,11 @@ export function ChatInterface() {
         id: `system-${Date.now()}-${messages.length + 1}`, // More unique key for errors
         role: 'system',
         content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        timestamp: new Date(),
-        created_at: new Date().toISOString(),
         model: selectedModel.id,
         mcp_tool_use: null,
       };
 
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages([...messages, errorMessage]);
     }
   };
 
@@ -313,47 +313,46 @@ export function ChatInterface() {
 
         <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
           <div>
-            {messages.map((message) => (
+            {messages.map((message, i) => (
               <ChatMessage
                 id={message.id}
-              key={message.id}
-              role={message.role}
-              content={message.content}
-              timestamp={message.timestamp}
-              model={message.model}
-              toolCall={message.mcp_tool_use}
-              onDecision={handleToolDecision}
-              isGenerating={isLoading}
-            />
-          ))}
-          {outgoingMessage && (
-            <OutgoingMessage
-              content={outgoingMessage.content}
-              model={outgoingMessage.model}
-            />
-          )}
-          {incomingMessage !== null && (
-            <IncomingMessage
-              incomingMessage={incomingMessage.message}
-              model={incomingMessage.model}
-            />
-          )}
+                key={message.id}
+                role={message.role}
+                content={message.content}
+                model={message.model}
+                toolCall={message.mcp_tool_use}
+                onDecision={handleToolDecision}
+                disabledToolCall={isLoading || i != messages.length - 1}
+              />
+            ))}
+            {outgoingMessage && (
+              <OutgoingMessage
+                content={outgoingMessage.content}
+                model={outgoingMessage.model}
+              />
+            )}
+            {incomingMessage !== null && (
+              <IncomingMessage
+                incomingMessage={incomingMessage.message}
+                model={incomingMessage.model}
+              />
+            )}
+          </div>
         </div>
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          isLoading={isLoading || isLoadingMessages || isLoadingApiKeys}
+          apiKeysLoaded={apiKeys !== undefined && apiKeys.length > 0}
+          configuredProviders={configuredProviders}
+          selectedModel={selectedModel}
+          onModelChange={handleModelChange}
+        />
+        {/* API Key Manager Modal */}
+        <ApiKeyManagerModal
+          isOpen={isApiKeyModalOpen}
+          onClose={() => setIsApiKeyModalOpen(false)}
+        />
       </div>
-      <ChatInput
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading || isLoadingMessages || isLoadingApiKeys}
-        apiKeysLoaded={apiKeys !== undefined && apiKeys.length > 0}
-        configuredProviders={configuredProviders}
-        selectedModel={selectedModel}
-        onModelChange={handleModelChange}
-      />
-      {/* API Key Manager Modal */}
-      <ApiKeyManagerModal
-        isOpen={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
-      />
-    </div>
     </div>
   );
 }

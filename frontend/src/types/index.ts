@@ -12,8 +12,6 @@ export interface MCPToolUse {
 
 export interface Message extends MessageCreate {
   id: string;
-  created_at: string; // Add created_at property
-  timestamp: Date;
   role: MessageRole;
   content: string;
   model: string;

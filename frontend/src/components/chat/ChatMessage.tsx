@@ -10,16 +10,15 @@ interface ChatMessageProps {
   id: string
   role: MessageRole
   content: string
-  timestamp: Date
   model: string
   toolCall: MCPToolUse | null
   onDecision: (toolDecide: boolean) => void
-  isGenerating: boolean
+  disabledToolCall: boolean
 }
 
-export function ChatMessage({ role, content, timestamp, model, toolCall, onDecision, isGenerating }: ChatMessageProps) {
+export function ChatMessage({ role, content, model, toolCall, onDecision, disabledToolCall }: ChatMessageProps) {
   const isUser = role === 'user';
-  const isFunctionCall = role === 'function_call';
+  const isToolCall = !!toolCall;
 
   let bgColor = 'bg-gray-50';
   let avatar = (
@@ -39,7 +38,7 @@ export function ChatMessage({ role, content, timestamp, model, toolCall, onDecis
       </svg>
     );
     senderName = 'You';
-  } else if (isFunctionCall) {
+  } else if (isToolCall) {
     bgColor = 'bg-yellow-100';
     avatar = (
       // TODO: Replace with a more appropriate icon for function calls
@@ -55,26 +54,21 @@ export function ChatMessage({ role, content, timestamp, model, toolCall, onDecis
     <div className={`py-5 ${bgColor}`}>
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-start">
-          <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${isUser ? 'bg-blue-100 text-blue-600' : isFunctionCall ? 'bg-yellow-200 text-yellow-800' : 'bg-purple-100 text-purple-600'}`}>
+          <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${isUser ? 'bg-blue-100 text-blue-600' : isToolCall ? 'bg-yellow-200 text-yellow-800' : 'bg-purple-100 text-purple-600'}`}>
             {avatar}
           </div>
           <div className="ml-3 flex-1">
             <div className="flex items-center">
-              <p className={`text-sm font-medium ${isUser ? 'text-gray-900' : isFunctionCall ? 'text-yellow-800' : 'text-gray-900'}`}>
+              <p className={`text-sm font-medium ${isUser ? 'text-gray-900' : isToolCall ? 'text-yellow-800' : 'text-gray-900'}`}>
                 {senderName}
               </p>
-              {timestamp && (
-                <span className="ml-2 text-xs text-gray-500">
-                  {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
             </div>
             <div className={`mt-1 text-sm ${textColor}`}>
               <div className="prose prose-sm">
                 {isUser ? (
                   <Nl2p text={content} />
                 ) : toolCall ? (
-                  <ToolCallMessage toolCall={toolCall} onDecision={onDecision} isGenerating={isGenerating}/>
+                  <ToolCallMessage toolCall={toolCall} onDecision={onDecision} disabled={disabledToolCall}/>
                 ) : (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {content}
