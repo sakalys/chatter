@@ -1,20 +1,36 @@
 from typing import Annotated, Any
 from uuid import UUID
 
+from typing import Annotated, Any
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.dependencies import DB, get_current_user
 from app.models.user import User
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigResponse, MCPConfigUpdate
+from app.schemas.mcp_tool import McpTool  # Import McpTool schema
 from app.services.mcp_config import (
     create_mcp_config,
     delete_mcp_config,
     get_mcp_config_by_id_and_user_id,
     get_mcp_configs_by_user,
     update_mcp_config,
+    get_available_mcp_tools, # Import the new service function
 )
 
 router = APIRouter()
+
+@router.get("/tools", response_model=list[McpTool])
+async def read_available_mcp_tools(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: DB,
+):
+    """
+    Get all available MCP tools from configured MCP servers for the current user.
+    """
+    tools = await get_available_mcp_tools(db, current_user)
+    return tools
 
 
 @router.get("", response_model=list[MCPConfigResponse])

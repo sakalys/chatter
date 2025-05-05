@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById } from '../../types';
+import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById, McpTool } from '../../types'; // Import McpTool
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { toast } from 'react-toastify';
@@ -19,6 +19,11 @@ const fetchMessages = async (conversationId: string | undefined): Promise<Messag
 
 const fetchApiKeys = async (): Promise<ApiKey[]> => {
   return apiFetch<ApiKey[]>('GET', '/api-keys');
+};
+
+// New fetch function for MCP tools
+const fetchMcpTools = async (): Promise<McpTool[]> => {
+  return apiFetch<McpTool[]>('GET', '/mcp-configs/tools');
 };
 
 
@@ -61,6 +66,14 @@ export function ChatInterface() {
     queryFn: fetchApiKeys,
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
+
+  // Fetch MCP tools using React Query
+  const { data: mcpTools, isLoading: isLoadingMcpTools, refetch: refetchMcpTools } = useQuery<McpTool[], Error>({
+    queryKey: ['mcpTools'],
+    queryFn: fetchMcpTools,
+    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
+  });
+
 
   // Update messages state when fetchedMessages changes
   useEffect(() => {
@@ -311,6 +324,21 @@ export function ChatInterface() {
           </div>
         )}
 
+        {/* Display available MCP tools */}
+        {mcpTools && mcpTools.length > 0 && (
+          <div className="p-4 bg-gray-100 overflow-y-auto max-h-40">
+            <h4 className="text-sm font-semibold mb-2">Available Tools:</h4>
+            <ul className="list-disc list-inside text-xs">
+              {mcpTools.map((tool, index) => (
+                <li key={index}>
+                  <strong>{tool.name}</strong> ({tool.server}): {tool.description}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+
         <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
           <div>
             {messages.map((message, i) => (
@@ -341,7 +369,7 @@ export function ChatInterface() {
         </div>
         <ChatInput
           onSendMessage={handleSendMessage}
-          isLoading={isLoading || isLoadingMessages || isLoadingApiKeys}
+          isLoading={isLoading || isLoadingMessages || isLoadingApiKeys || isLoadingMcpTools} // Include MCP tools loading
           apiKeysLoaded={apiKeys !== undefined && apiKeys.length > 0}
           configuredProviders={configuredProviders}
           selectedModel={selectedModel}

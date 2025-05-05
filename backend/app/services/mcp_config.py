@@ -1,3 +1,4 @@
+import httpx
 from uuid import UUID
 
 from app.models.mcp_tool import MCPTool
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.mcp_config import MCPConfig
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
+from app.schemas.mcp_tool import McpTool # Import McpTool schema
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -20,13 +22,13 @@ async def get_mcp_configs_by_user(
     
     Args:
         db: Database session
-        user_id: User ID
+        user: User object
         
     Returns:
         List of MCP configuration objects
     """
     result = await db.execute(select(MCPConfig).where(MCPConfig.user_id == user.id))
-    return result.scalars().all()
+    return list(result.scalars().all()) # Cast to list
 
 
 async def get_mcp_config_by_id_and_user_id(
@@ -56,18 +58,19 @@ async def get_mcp_config_by_id_and_user_id(
 
 async def create_mcp_config(
     db: AsyncSession,
-    mcp_config_in: MCPConfigCreate, 
+    mcp_config_in: MCPConfigCreate,
     user: User,
     fetch_tools: bool = True,
 ) -> MCPConfig:
     """
     Create a new MCP configuration.
-    
+
     Args:
         db: Database session
         mcp_config_in: MCP configuration creation data
-        user_id: User ID
-        
+        user: The user creating the configuration
+        fetch_tools: Whether to fetch tools after creating the config
+
     Returns:
         Created MCP configuration object
     """
@@ -189,3 +192,44 @@ async def delete_mcp_config(
     """
     await db.delete(mcp_config)
     await db.commit()
+
+async def get_available_mcp_tools(db: AsyncSession, user: User) -> list[McpTool]:
+    """
+    Get all available MCP tools from configured MCP servers for the current user.
+
+    Args:
+        db: Database session
+        user: The current user
+
+    Returns:
+        A list of McpTool objects
+    """
+    # Fetch all MCP configurations for the user
+    mcp_configs = await get_mcp_configs_by_user(db, user)
+
+    # Update tools for each configuration to ensure we have the latest
+    for config in mcp_configs:
+        try:
+            await update_tools(db, config)
+        except Exception as e:
+            # Log the error but continue with other configurations
+            print(f"Error updating tools for config {config.name}: {e}")
+            # Optionally, mark the config as inactive or add an error status
+
+    # Fetch all tools associated with the user's configurations from the database
+    result = await db.execute(
+        select(MCPTool).join(MCPConfig).where(MCPConfig.user_id == user.id)
+    )
+    tools = result.scalars().all()
+
+    # Convert database models to schema models
+    schema_tools = [
+        McpTool(
+            name=tool.name,
+            description=tool.description or "", # Ensure description is a string
+            server=tool.mcp_config.name # Use the config name as the server identifier
+        )
+        for tool in tools
+    ]
+
+    return schema_tools
