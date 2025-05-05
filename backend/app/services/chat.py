@@ -1,17 +1,10 @@
-from asyncio import constants
-from datetime import datetime
 import json
-from json import tool
 import logging
 from re import S
-from sqlite3 import InterfaceError
 from typing import Any, AsyncGenerator, Literal, Union
 from uuid import UUID
 from app.models.mcp_tool_use import ToolUseState
-from google import genai
-from google.genai import types
-from litellm import acompletion, completion
-from openai import AsyncOpenAI # Import AsyncOpenAI
+from litellm import acompletion
 
 from fastapi import HTTPException, status
 from sse_starlette.sse import EventSourceResponse
@@ -23,7 +16,6 @@ from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.mcp_config import MCPConfig
 from app.models.mcp_tool import MCPTool
-from app.models.message import Message
 from app.schemas.message import MessageCreate, ToolUseCreate
 from app.models.user import User # Import User model
 from app.services.api_key import decrypt_api_key
@@ -56,93 +48,6 @@ class FunctionCall(BaseModel):
     def __str__(self):
         return f"FunctionCall(name={self.name}, arguments={self.arguments})"
 
-async def _generate_google_response(
-    messages: list[dict[str, str]],
-    model: str,
-    api_key: str,
-    mcp_tools: list[MCPTool],
-) -> AsyncGenerator[StreamEvent, None]:
-    """
-    Generate a chat response from the Google API.
-
-    Args:
-        messages: List of messages in the conversation
-        model: Model to use for generation
-        api_key: Decrypted Google API key
-
-    Returns:
-        Response from the Google API
-    """
-
-    tools: list[types.Tool] = [
-        types.Tool(
-            function_declarations=[
-                {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": {
-                        k: v
-                        for k, v in tool.inputSchema.items()
-                        if k not in ["additionalProperties", "$schema"]
-                    },
-                }
-            ]
-        )
-        for tool in mcp_tools
-    ]
-
-    # Format messages for Google's API
-    formatted_messages: list[Any] = []
-    for msg in messages:
-        if "content" in msg:
-            if msg["role"] == "user":
-                formatted_messages.append({"role": "user", "parts": [{"text": msg["content"]}]})
-            elif msg["role"] == "assistant":
-                formatted_messages.append({"role": "model", "parts": [{"text": msg["content"]}]})
-            elif msg["role"] == "system":
-                formatted_messages.append({"role": "user", "parts": [{"text": f"System: {msg['content']}"}]})
-            elif msg["role"] == "function_call":
-                formatted_messages.append({"role": "model", "parts": [{"text": f"""
-<tool_call>
-    {msg['content']}
-</tool_call>
-"""}]})
-        else:
-            logger.warning(f"Message missing 'content' key: {msg}")
-
-    client = genai.Client(api_key=api_key)
-
-    async for chunk in await client.aio.models.generate_content_stream(
-        # model="gemini-2.0-flash-001",
-        model=model,
-        contents=formatted_messages,
-        config={
-            "tools": tools,
-        },
-    ):
-        if (chunk.candidates 
-            and len(chunk.candidates) > 0
-            and chunk.candidates[0].content 
-            and chunk.candidates[0].content.parts 
-            and len(chunk.candidates[0].content.parts) > 0
-            and chunk.candidates[0].content.parts[0].function_call
-            and chunk.candidates[0].content.parts[0].function_call.name is not None
-        ): 
-            function_call = chunk.candidates[0].content.parts[0].function_call
-
-            our_call = FunctionCall(
-                name=function_call.name,
-                arguments=function_call.args,
-            )
-
-            yield StreamEvent("function_call", json.dumps(our_call.model_dump()))
-
-            continue
-
-        yield StreamEvent("text", chunk.text if chunk.text else "")
-
-    return
-
 async def _generate_litellm_response(
     provider: str,
     messages: list[dict[str, str]],
@@ -151,20 +56,20 @@ async def _generate_litellm_response(
     mcp_tools: list[MCPTool],
 ) -> AsyncGenerator[StreamEvent, None]:
     """
-    Generate a chat response from the OpenAI API using the SDK, including tool definitions.
+    Generate a chat response
 
     Args:
         messages: List of messages in the conversation
         model: Model to use for generation
-        api_key: Decrypted OpenAI API key
 
     Returns:
-        Streaming response from the OpenAI API
+        Streaming response 
     """
-    # Convert MCP tools to OpenAI tools format
+
     if provider == "google":
         provider = "gemini"
 
+    # Convert MCP tools to OpenAI tools format
     tools = []
     for tool in mcp_tools:
         openai_tool = {
@@ -180,8 +85,6 @@ async def _generate_litellm_response(
             },
         }
         tools.append(openai_tool)
-
-    client = AsyncOpenAI(api_key=api_key)
 
     # Format messages for Google's API
     formatted_messages: list[Any] = []
@@ -261,113 +164,6 @@ async def _generate_litellm_response(
         yield StreamEvent("function_call", json.dumps(call.model_dump()))
         unfinished_call = None
 
-async def _generate_openai_response(
-    messages: list[dict[str, str]],
-    model: str,
-    api_key: str,
-    mcp_tools: list[MCPTool],
-) -> AsyncGenerator[StreamEvent, None]:
-    """
-    Generate a chat response from the OpenAI API using the SDK, including tool definitions.
-
-    Args:
-        messages: List of messages in the conversation
-        model: Model to use for generation
-        api_key: Decrypted OpenAI API key
-
-    Returns:
-        Streaming response from the OpenAI API
-    """
-    # Convert MCP tools to OpenAI tools format
-    tools = []
-    for tool in mcp_tools:
-        openai_tool = {
-            "type": "function",
-            "function": {
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": {
-                    k: v
-                    for k, v in tool.inputSchema.items()
-                    if k not in ["additionalProperties", "$schema"]
-                },
-            },
-        }
-        tools.append(openai_tool)
-
-    client = AsyncOpenAI(api_key=api_key)
-
-    # Format messages for Google's API
-    formatted_messages: list[Any] = []
-    for msg in messages:
-        if "content" in msg:
-            if msg["role"] == "user":
-                formatted_messages.append({"role": "user", "content": msg["content"]})
-            elif msg["role"] == "assistant":
-                formatted_messages.append({"role": "assistant", "content": msg["content"]})
-            elif msg["role"] == "system":
-                formatted_messages.append({"role": "user", "content": f"System: {msg['content']}"})
-            elif msg["role"] == "function_call":
-                formatted_messages.append({"role": "assistant", "content": f"""
-<tool_call>
-    {msg['content']}
-</tool_call>
-"""})
-
-    stream = await client.chat.completions.create(
-        model=model,
-        messages=formatted_messages,
-        stream=True,
-        tools=tools, # Pass the formatted tools
-    )
-
-    unfinished_call = None
-
-    async for chunk in stream:
-        if not chunk.choices:
-            continue
-
-        if chunk.choices[0].delta.tool_calls:
-
-            tool_call = chunk.choices[0].delta.tool_calls[0]
-
-            # having an id, indicates a new function call
-            if tool_call.id is not None:
-                if unfinished_call is not None:
-                    # if we have an incomplete call, we need to yield it
-                    call = FunctionCall(
-                        name=unfinished_call["name"],
-                        arguments=json.loads(unfinished_call["arguments"]),
-                    )
-                    yield StreamEvent("function_call", json.dumps(call.model_dump()))
-
-                unfinished_call = {
-                    "name": "",
-                    "arguments": "",
-                }
-
-            function_call = tool_call.function
-
-            if function_call is not None:
-                if unfinished_call is None:
-                    raise ValueError("Previous buffered call must be set before accessing function_call")
-
-                if function_call.name:
-                    unfinished_call["name"] = function_call.name
-
-                unfinished_call["arguments"] += function_call.arguments or ""
-        
-        if chunk.choices[0].delta.content is not None:
-            yield StreamEvent("text", chunk.choices[0].delta.content)
-
-    if unfinished_call is not None and unfinished_call["name"] != "":
-        call = FunctionCall(
-            name=unfinished_call["name"],
-            arguments=json.loads(unfinished_call["arguments"]),
-        )
-        yield StreamEvent("function_call", json.dumps(call.model_dump()))
-        unfinished_call = None
-
 async def generate_chat_response(
     user: User, # Added user parameter
     messages: list[dict[str, str]], # Changed type hint to match _generate functions
@@ -398,18 +194,6 @@ async def generate_chat_response(
 
     response = _generate_litellm_response(provider, messages, model, api_key, all_mcp_tools) # Pass mcp_tools to OpenAI function
     return response
-
-    if provider == "google":
-        response = _generate_google_response(messages, model, api_key, all_mcp_tools)
-        return response
-    elif provider == "openai":
-        response = _generate_openai_response(messages, model, api_key, all_mcp_tools) # Pass mcp_tools to OpenAI function
-        return response
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=f"Unsupported LLM provider: {provider}",
-    )
 
 async def handle_chat_request(
     db,

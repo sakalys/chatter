@@ -14,6 +14,7 @@ logging.basicConfig(
 
 
 logging.getLogger("uvicorn.error").level = logging.WARNING
+logging.getLogger("LiteLLM").level = logging.WARNING
 
 
 logger = logging.getLogger(__name__)

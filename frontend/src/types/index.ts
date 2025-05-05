@@ -104,21 +104,28 @@ export const AVAILABLE_MODELS: Model[] = [
     id: 'gpt-3.5-turbo',
     name: 'GPT-3.5 Turbo',
     provider: 'openai',
-    description: 'OpenAI\'s efficient and cost-effective model',
+    description: '',
     requiresApiKey: true
   },
   {
-    id: 'claude-3-opus',
-    name: 'Claude 3 Opus',
+    id: 'claude-3-7-sonnet-latest',
+    name: 'Claude 3.7 Sonnet',
     provider: 'anthropic',
-    description: 'Anthropic\'s most powerful model',
+    description: '',
     requiresApiKey: true
   },
   {
-    id: 'claude-3-sonnet',
-    name: 'Claude 3 Sonnet',
+    id: 'claude-3-5-sonnet-latest',
+    name: 'Claude 3.5 Sonnet',
     provider: 'anthropic',
-    description: 'Anthropic\'s balanced model for performance and efficiency',
+    description: '',
+    requiresApiKey: true
+  },
+  {
+    id: 'claude-3-5-haiku-latest',
+    name: 'Claude 3.5 Haiku',
+    provider: 'anthropic',
+    description: '',
     requiresApiKey: true
   },
   {

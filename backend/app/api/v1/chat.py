@@ -88,12 +88,9 @@ async def list_available_models():
             {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo"},
         ],
         "anthropic": [
-            {"id": "claude-3-opus-20240229", "name": "Claude 3 Opus"},
-            {"id": "claude-3-sonnet-20240229", "name": "Claude 3 Sonnet"},
-            {"id": "claude-3-haiku-20240307", "name": "Claude 3 Haiku"},
-            {"id": "claude-2.1", "name": "Claude 2.1"},
-            {"id": "claude-2.0", "name": "Claude 2.0"},
-            {"id": "claude-instant-1.2", "name": "Claude Instant 1.2"},
+            {"id": "claude-3-7-sonnet-latest", "name": "Claude 3.7 Sonnet"},
+            {"id": "claude-3-5-sonnet-latest", "name": "Claude 3.5 Sonnet"},
+            {"id": "claude-3-5-haiku-latest", "name": "Claude 3.5 Haiku"},
         ],
         "google": [
             {"id": "gemini-2.5-flash-preview-04-17", "name": "Gemini 2.5 Flash"},
