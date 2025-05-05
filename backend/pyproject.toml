@@ -27,6 +27,7 @@ dependencies = [
     "mcp>=1.6.0",
     "python-dotenv>=1.1.0",
     "alembic-postgresql-enum>=1.7.0",
+    "litellm>=1.67.5",
 ]
 
 [project.optional-dependencies]
