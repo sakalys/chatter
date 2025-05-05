@@ -4,6 +4,7 @@ import json
 from json import tool
 import logging
 from re import S
+from sqlite3 import InterfaceError
 from typing import Any, AsyncGenerator, Literal, Union
 from uuid import UUID
 from app.models.mcp_tool_use import ToolUseState

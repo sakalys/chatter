@@ -193,33 +193,40 @@ async def delete_mcp_config(
     await db.delete(mcp_config)
     await db.commit()
 
-async def get_available_mcp_tools(db: AsyncSession, user: User) -> list[McpTool]:
+async def get_available_mcp_tools(
+    db: AsyncSession,
+    user: User,
+    config_id: UUID | None = None, # Add optional config_id parameter
+) -> list[McpTool]:
     """
-    Get all available MCP tools from configured MCP servers for the current user.
+    Get all available MCP tools from configured MCP servers for the current user,
+    optionally filtered by MCP configuration ID.
 
     Args:
         db: Database session
         user: The current user
+        config_id: Optional MCP configuration ID to filter by
 
     Returns:
         A list of McpTool objects
     """
     # Fetch all MCP configurations for the user
-    mcp_configs = await get_mcp_configs_by_user(db, user)
+    # If config_id is provided, only fetch that specific config to update its tools
+    if config_id:
+        mcp_configs = []
+        config = await get_mcp_config_by_id_and_user_id(db, config_id, user.id)
+        if config:
+            mcp_configs.append(config)
+    else:
+        mcp_configs = await get_mcp_configs_by_user(db, user)
 
-    # Update tools for each configuration to ensure we have the latest
-    for config in mcp_configs:
-        try:
-            await update_tools(db, config)
-        except Exception as e:
-            # Log the error but continue with other configurations
-            print(f"Error updating tools for config {config.name}: {e}")
-            # Optionally, mark the config as inactive or add an error status
 
     # Fetch all tools associated with the user's configurations from the database
-    result = await db.execute(
-        select(MCPTool).join(MCPConfig).where(MCPConfig.user_id == user.id)
-    )
+    query = select(MCPTool).join(MCPConfig).where(MCPConfig.user_id == user.id)
+    if config_id:
+        query = query.where(MCPTool.mcp_config_id == config_id) # Filter by config_id if provided
+
+    result = await db.execute(query)
     tools = result.scalars().all()
 
     # Convert database models to schema models

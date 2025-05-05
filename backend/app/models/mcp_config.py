@@ -23,4 +23,4 @@ class MCPConfig(Base):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="mcp_configs")
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    tools: Mapped[list["MCPTool"]] = relationship(back_populates="mcp_config")
+    tools: Mapped[list["MCPTool"]] = relationship(back_populates="mcp_config", cascade="all,delete-orphan")

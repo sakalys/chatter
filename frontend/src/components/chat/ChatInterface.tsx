@@ -324,20 +324,6 @@ export function ChatInterface() {
           </div>
         )}
 
-        {/* Display available MCP tools */}
-        {mcpTools && mcpTools.length > 0 && (
-          <div className="p-4 bg-gray-100 overflow-y-auto max-h-40">
-            <h4 className="text-sm font-semibold mb-2">Available Tools:</h4>
-            <ul className="list-disc list-inside text-xs">
-              {mcpTools.map((tool, index) => (
-                <li key={index}>
-                  <strong>{tool.name}</strong> ({tool.server}): {tool.description}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
 
         <div className="flex flex-col-reverse overflow-y-scroll flex-1 relative min-h-0">
           <div>
@@ -369,7 +355,7 @@ export function ChatInterface() {
         </div>
         <ChatInput
           onSendMessage={handleSendMessage}
-          isLoading={isLoading || isLoadingMessages || isLoadingApiKeys || isLoadingMcpTools} // Include MCP tools loading
+          isLoading={isLoading || isLoadingMessages || isLoadingApiKeys}
           apiKeysLoaded={apiKeys !== undefined && apiKeys.length > 0}
           configuredProviders={configuredProviders}
           selectedModel={selectedModel}

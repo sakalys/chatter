@@ -25,11 +25,13 @@ router = APIRouter()
 async def read_available_mcp_tools(
     current_user: Annotated[User, Depends(get_current_user)],
     db: DB,
+    config_id: UUID | None = None, # Add optional config_id query parameter
 ):
     """
-    Get all available MCP tools from configured MCP servers for the current user.
+    Get all available MCP tools from configured MCP servers for the current user,
+    optionally filtered by MCP configuration ID.
     """
-    tools = await get_available_mcp_tools(db, current_user)
+    tools = await get_available_mcp_tools(db, current_user, config_id=config_id) # Pass config_id to service function
     return tools
 
 
