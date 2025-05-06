@@ -1,50 +1,31 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { DefaultError, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../util/api';
 import { McpConfig, McpTool } from '../../types'; // Import McpConfig and McpTool
-
-const fetchMcpConfigs = async (): Promise<McpConfig[]> => {
-  return apiFetch<McpConfig[]>('GET', '/mcp-configs');
-};
-
-// New fetch function for tools of a specific MCP config
-const fetchMcpToolsForConfig = async (configId: string): Promise<McpTool[]> => {
-  return apiFetch<McpTool[]>('GET', `/mcp-configs/tools?config_id=${configId}`);
-};
-
-interface McpConfigModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (configs: McpConfig[]) => void;
-  initialConfigs?: McpConfig[];
-}
+import { FormErrors } from './FormErrors';
 
 type EditConfigType = {
-    id: string | null // null means a new config is being created
-    name: string
-    url: string
-  };
+  id: string | null // null means a new config is being created
+  name: string
+  url: string
+};
 
-export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }: McpConfigModalProps) {
-  const [configs, setConfigs] = useState<McpConfig[]>(initialConfigs.length > 0 ? initialConfigs : []);
+export function McpConfigModal() {
+  const [configs, setConfigs] = useState<McpConfig[]>([]);
   const [editingConfig, setEditingConfig] = useState<EditConfigType | null>(null);
 
   // Fetch MCP configurations using React Query
-  const { data: fetchedMcpConfigs, error: mcpConfigsError, isLoading: isLoadingMcpConfigs } = useQuery<McpConfig[], Error>({
-    queryKey: ['mcpConfigs'],
-    queryFn: fetchMcpConfigs,
-    enabled: isOpen, // Only fetch when the modal is open
+  const { data: fetchedMcpConfigs, error: mcpConfigsError } = useQuery<McpConfig[], Error>({
+    queryKey: ['mcp-configs'],
+    queryFn: () => apiFetch<McpConfig[]>('GET', '/mcp-configs'),
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
 
-  // Update configs state when fetchedMcpConfigs changes and modal is open
   useEffect(() => {
-    if (isOpen && fetchedMcpConfigs) {
+    if (fetchedMcpConfigs) {
       setConfigs(fetchedMcpConfigs);
     }
-  }, [isOpen, fetchedMcpConfigs]);
-
-  if (!isOpen) return null;
+  }, [fetchedMcpConfigs]);
 
   const addConfig = () => {
     setEditingConfig({
@@ -54,51 +35,41 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
     });
   };
 
-  const handleSaveIndividualConfig = async (cfg: EditConfigType) => {
-    try {
-      let savedConfig: McpConfig;
-      if (!cfg.id) { 
-        // New config, use POST
-        savedConfig = await apiFetch<McpConfig>('POST', '/mcp-configs', cfg);
-        // Replace the temporary config with the saved one from the backend
-        setConfigs(prev => [...prev, savedConfig]) 
-      } else {
-        // Existing config, use PUT
-        savedConfig = await apiFetch<McpConfig>('PUT', `/mcp-configs/${cfg.id}`, cfg);
-        // Update local state with the response
+  const queryClient = useQueryClient();
+
+  const saveConfig = useMutation<McpConfig, DefaultError, EditConfigType>({
+    mutationFn: (cfg) => cfg.id 
+      ? apiFetch('PUT', `/mcp-configs/${cfg.id}`, cfg)
+      : apiFetch('POST', '/mcp-configs', cfg),
+    onSuccess(newCfg, editedCfg) {
+      if (editedCfg.id) {
         setConfigs(prev => prev.map(config =>
-          config.id === savedConfig.id ? savedConfig : config
+          config.id === editedCfg.id ? newCfg : config
         ));
+      } else {
+        setConfigs(prev => [...prev, newCfg]) 
       }
 
-      setEditingConfig(null); // Close edit form on successful save
-    } catch (error) {
-      console.error('Failed to save MCP configuration:', error);
-      // Optionally show an error message to the user
+      setEditingConfig(null)
+      queryClient.invalidateQueries({ queryKey: ['mcp-tool', newCfg.id] });
+      saveConfig.reset();
     }
-  };
+  });
 
-  const handleDeleteIndividualConfig = async (id: string) => {
-    try {
-      // Assuming a DELETE endpoint for deleting a single config
-      await apiFetch('DELETE', `/mcp-configs/${id}`);
-      console.log('Configuration deleted successfully:', id); // Log success
-      // Remove from local state
+
+  const deleteConfig = useMutation<void, DefaultError, string>({
+    mutationFn: (id) => apiFetch('DELETE', `/mcp-configs/${id}`),
+    onSuccess(_, id) {
       const updatedConfigs = configs.filter(config => config.id !== id);
       setConfigs(updatedConfigs);
-      setTimeout(() => setEditingConfig(null), 0); // Close edit form on successful delete with a slight delay
-      console.log('Edit form should be closed now.'); // Confirm this line is reached
-    } catch (error) {
-      console.error('Failed to delete MCP configuration:', error);
-      alert('Failed to delete MCP configuration.'); // Show error to user
+      deleteConfig.reset();
+      setEditingConfig(null);
     }
-  };
+  })
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">MCP Configurations</h2>
+      <div className="">
+        <div className="">
           <p className="text-sm text-gray-600 mb-6">
             Add Model Context Protocol (MCP) servers to extend the capabilities of your chat platform.
           </p>
@@ -106,6 +77,7 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
           {editingConfig === null ? (
             // Index View
             <div className="space-y-4">
+            <FormErrors error={mcpConfigsError}/>
               {configs.map((config) => (
                 <div key={config.id} className="border border-gray-200 rounded-md p-4 flex flex-col"> {/* Changed to flex-col */}
                   <div className="flex justify-between items-center mb-2"> {/* Added flex container for name/url and edit button */}
@@ -123,7 +95,7 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
                   </div>
 
                   {/* Display tools for this config */}
-                  <ConfigToolsDisplay configId={config.id} isModalOpen={isOpen} /> {/* New component to display tools */}
+                  <ConfigToolsDisplay configId={config.id}/> {/* New component to display tools */}
 
                 </div>
               ))}
@@ -142,9 +114,10 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
               <form className="space-y-4"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    handleSaveIndividualConfig(editingConfig)
+                    saveConfig.mutate(editingConfig)
                   }}
                >
+                <FormErrors error={saveConfig.error || deleteConfig.error} />
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Name
@@ -174,7 +147,7 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
                 </div>
 
                 {/* Display tools for the config being edited */}
-                {editingConfig.id && <ConfigToolsDisplay configId={editingConfig.id} isModalOpen={isOpen} />}
+                {editingConfig.id && <ConfigToolsDisplay configId={editingConfig.id} />}
 
 
                 <div className="flex justify-end space-x-3">
@@ -182,7 +155,7 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
                     <button
                       type="button"
                       className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md"
-                      onClick={() => handleDeleteIndividualConfig(editingConfig.id)}
+                      onClick={() => confirm('Are you sure?') && deleteConfig.mutate(editingConfig.id)}
                     >
                       Delete
                     </button>
@@ -195,6 +168,7 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
                     Cancel
                   </button>
                   <button
+                    disabled={saveConfig.isPending}
                     type="submit"
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
                   >
@@ -205,35 +179,19 @@ export function McpConfigModal({ isOpen, onClose, onSave, initialConfigs = [] }:
             )
           )}
         </div>
-
-        {/* The main modal buttons remain, but Save All Changes is removed */}
-        <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3 rounded-b-lg">
-          <button
-            type="button"
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-            onClick={onClose}
-          >
-            Close
-          </button>
-          {/* Removed Save All Changes button as individual saves persist */}
-        </div>
       </div>
-    </div>
   );
 }
 
 // New component to fetch and display tools for a specific config
 interface ConfigToolsDisplayProps {
   configId: string;
-  isModalOpen: boolean;
 }
 
-function ConfigToolsDisplay({ configId, isModalOpen }: ConfigToolsDisplayProps) {
+function ConfigToolsDisplay({ configId }: ConfigToolsDisplayProps) {
   const { data: tools, isLoading, error } = useQuery<McpTool[], Error>({
-    queryKey: ['mcpTools', configId],
-    queryFn: () => fetchMcpToolsForConfig(configId),
-    enabled: isModalOpen, // Only fetch when the modal is open
-    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
+    queryKey: ['mcp-tools', configId],
+    queryFn: () => apiFetch<McpTool[]>('GET', `/mcp-configs/tools?config_id=${configId}`),
   });
 
   if (isLoading) {

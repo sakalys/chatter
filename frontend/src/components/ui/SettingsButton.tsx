@@ -5,18 +5,12 @@ import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../util/api';
 import { useNavigate } from 'react-router-dom';
-
-interface McpConfig {
-  id: string;
-  name: string;
-  url: string;
-}
+import { Modal, ModalBody, ModalBox, ModalFooter } from './modal';
 
 export function SettingsButton() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isMcpConfigModalOpen, setIsMcpConfigModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [mcpConfigs, setMcpConfigs] = useState<McpConfig[]>([]);
   const navigate = useNavigate();
   const auth = useAuth();
 
@@ -34,12 +28,6 @@ export function SettingsButton() {
       // Optionally, display an error message to the user
     },
   });
-
-  const handleMcpConfigSave = (configs: McpConfig[]) => {
-    setMcpConfigs(configs);
-    // In a real app, you would save these to localStorage or a backend
-    localStorage.setItem('mcpConfigs', JSON.stringify(configs));
-  };
 
   const handleLogoutClick = () => {
     logoutMutation.mutate();
@@ -94,12 +82,27 @@ export function SettingsButton() {
         onClose={() => setIsApiKeyModalOpen(false)}
       />
 
-      <McpConfigModal
-        isOpen={isMcpConfigModalOpen}
-        onClose={() => setIsMcpConfigModalOpen(false)}
-        onSave={handleMcpConfigSave}
-        initialConfigs={mcpConfigs}
-      />
+      <Modal open={isMcpConfigModalOpen} onClose={() => setIsMcpConfigModalOpen(false)}      >
+        <ModalBox
+              title="MCP Configuration"
+            width="md"
+            height="auto">
+            <ModalBody>
+                <McpConfigModal/>
+            </ModalBody>
+            <ModalFooter>
+        <div className="flex justify-end space-x-3">
+          <button
+            type="button"
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+            onClick={() => setIsMcpConfigModalOpen(false)}
+          >
+            Close
+          </button>
+        </div>
+            </ModalFooter>
+        </ModalBox>
+      </Modal>
     </div>
   );
 }
