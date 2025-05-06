@@ -22,7 +22,7 @@ class Message(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     model: Mapped[str | None] = mapped_column(nullable=True)  # The model used for this message (if assistant)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False)
-    provider: Mapped[str] = mapped_column(nullable=True) # The provider of the message (e.g., "openai", "anthropic", "gemini")
+    provider: Mapped[str] = mapped_column() # The provider of the message (e.g., "openai", "anthropic", "gemini")
 
     # Relationships
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
