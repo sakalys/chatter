@@ -136,6 +136,7 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
             content=msg_data["content"],
             role=msg_data["role"],
             model="gpt-3.5-turbo",
+            provider="openai",
         )
         db.add(message)
 
@@ -147,7 +148,7 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
         content=json.dumps({"name": tool_name, "arguments": tool_args}),
         role="function_call",
         model="gpt-3.5-turbo",
-        meta={"provider": "openai"},
+        provider="openai",
         mcp_tool_use=MCPToolUse(
             tool=tool,
             name=tool_name,

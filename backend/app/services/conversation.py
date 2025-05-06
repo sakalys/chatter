@@ -198,7 +198,7 @@ async def add_message_to_conversation(
         role=message_in.role,
         content=message_in.content,
         model=message_in.model,
-        meta=message_in.meta,
+        provider=message_in.provider,
         conversation=conversation,
     )
     db.add(message)

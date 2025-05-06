@@ -21,8 +21,8 @@ class Message(Base):
     role: Mapped[str] = mapped_column(nullable=False)  # "user", "assistant", "system", etc.
     content: Mapped[str] = mapped_column(Text, nullable=False)
     model: Mapped[str | None] = mapped_column(nullable=True)  # The model used for this message (if assistant)
-    meta: Mapped[dict | None] = mapped_column(types.JSON, nullable=True)  # Additional metadata (tokens, model parameters, etc.)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False)
+    provider: Mapped[str] = mapped_column(nullable=True) # The provider of the message (e.g., "openai", "anthropic", "gemini")
 
     # Relationships
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")

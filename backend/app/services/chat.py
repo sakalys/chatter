@@ -7,6 +7,7 @@ from app.models.mcp_tool_use import ToolUseState
 from litellm import acompletion
 
 from fastapi import HTTPException, status
+import litellm
 from openai import AuthenticationError
 from sse_starlette.sse import EventSourceResponse
 from mcp import ClientSession
@@ -100,12 +101,6 @@ async def _generate_litellm_response(
 </tool_call>
 """})
 
-    # stream = await client.chat.completions.create(
-    #     model=model,
-    #     messages=formatted_messages,
-    #     stream=True,
-    #     tools=tools, # Pass the formatted tools
-    # )
     try:
         stream = await acompletion(
             stream=True,
@@ -247,6 +242,7 @@ async def handle_chat_request(
                 role="user",
                 content=user_message,
                 model=model,
+                provider=api_key.provider,
             ),
             conversation
         )
@@ -366,7 +362,7 @@ async def handle_chat_request(
                         role="assistant",
                         content=content,
                         model=model,
-                        meta={"provider": api_key.provider},
+                        provider=api_key.provider,
                     ),
                     conversation
                 )
@@ -399,7 +395,7 @@ async def handle_chat_request(
                         role="function_call",
                         content=json.dumps({"name": tool_call["name"], "arguments": tool_call["arguments"]}),
                         model=model,
-                        meta={"provider": api_key.provider},
+                        provider=api_key.provider,
                         tool_use=ToolUseCreate(
                             name=tool_call["name"],
                             args=tool_call["arguments"],

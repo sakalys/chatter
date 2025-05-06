@@ -22,13 +22,13 @@ class MessageBase(BaseModel):
     """Base message schema."""
     role: str = Field(..., description="Message role: 'user', 'assistant', or 'system'")
     content: str = Field(..., description="Message content in markdown format")
-    model: str | None = Field(..., description="The model used for this message (if assistant)")
+    provider: str = Field(..., description="The LLM provider (openai, gemini, anthropic)")
+    model: str = Field(..., description="The model used for this message (if assistant)")
     tool_use: Annotated[Optional[ToolUseResponse], Field(..., description="Tool use information", alias="mcp_tool_use")] = None
 
 class MessageCreate(MessageBase):
     """Message creation schema."""
     tool_use: Annotated[Optional[ToolUseCreate], Field(None, description="Tool use information")] = None
-    meta: Annotated[Optional[dict[str, Any]], Field(..., description="Additional metadata")] = None
 
 
 class MessageResponse(MessageBase):
