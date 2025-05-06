@@ -3,7 +3,7 @@ import logging
 from re import S
 from typing import Any, AsyncGenerator, Literal, Union
 from uuid import UUID
-from app.models.mcp_tool_use import ToolUseState
+from app.models.mcp_tool_use import MCPToolUse, ToolUseState
 from litellm import acompletion
 
 from fastapi import HTTPException, status
@@ -13,6 +13,7 @@ from sse_starlette.sse import EventSourceResponse
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
@@ -279,41 +280,19 @@ async def handle_chat_request(
         if tool_use == None:
             raise
 
-        mcp_tool: MCPTool = await tool_use.awaitable_attrs.tool
+        response_text = await handle_tool_call(
+            db,
+            tool_use,
+            tool_decision,
+            model,
+            api_key,
+            conversation,
+        )
 
-        mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
-
-        tool_use.state = ToolUseState.approved if tool_decision else ToolUseState.rejected
-        db.add(tool_use)
-        await db.commit()
-
-        # call the tool
-        async with sse_client(mcp_config.url) as streams:
-            async with ClientSession(*streams) as session:
-                await session.initialize()
-
-                result = await session.call_tool(
-                    tool_use.name,
-                    arguments=tool_use.args
-                )
-
-                response_text = result.content[0].text
-
-                await add_message_to_conversation(
-                    db,
-                    MessageCreate(
-                        role="function_call_result",
-                        content=response_text,
-                        model=model,
-                        provider=api_key.provider,
-                    ),
-                    conversation
-                )
-
-                formatted_messages.append({
-                    "role": "function_call_result",
-                    "content": response_text,
-                })
+        formatted_messages.append({
+            "role": "function_call_result",
+            "content": response_text,
+        })
 
     try:
         logger.debug("Calling generate_chat_response")
@@ -463,6 +442,40 @@ async def handle_chat_request(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating chat response: {e}"
         )
+
+async def handle_tool_call(db: AsyncSession, tool_use: MCPToolUse, tool_decision: bool, model: str, api_key: ApiKey, conversation: Conversation) -> str:
+    mcp_tool: MCPTool = await tool_use.awaitable_attrs.tool
+
+    mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
+
+    tool_use.state = ToolUseState.approved if tool_decision else ToolUseState.rejected
+    db.add(tool_use)
+    await db.commit()
+
+    # call the tool
+    async with sse_client(mcp_config.url) as streams:
+        async with ClientSession(*streams) as session:
+            await session.initialize()
+
+            result = await session.call_tool(
+                tool_use.name,
+                arguments=tool_use.args
+            )
+
+            response_text = result.content[0].text
+
+            await add_message_to_conversation(
+                db,
+                MessageCreate(
+                    role="function_call_result",
+                    content=response_text,
+                    model=model,
+                    provider=api_key.provider,
+                ),
+                conversation
+            )
+
+            return response_text
 
 async def generate_and_set_conversation_title(
     db,
