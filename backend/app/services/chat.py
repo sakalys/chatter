@@ -100,6 +100,14 @@ async def _generate_litellm_response(
     {msg['content']}
 </tool_call>
 """})
+            elif msg["role"] == "function_call_result":
+                formatted_messages.append({"role": "assistant", "content": f"""
+<tool_call_response>
+    {msg['content']}
+</tool_call_response>
+"""})
+
+    litellm.drop_params = True
 
     try:
         stream = await acompletion(
@@ -108,6 +116,7 @@ async def _generate_litellm_response(
             messages=formatted_messages,
             tools=tools,
             api_key=api_key,
+            parallel_tool_calls=False,
         )
 
         unfinished_call = None
@@ -288,13 +297,22 @@ async def handle_chat_request(
                     arguments=tool_use.args
                 )
 
+                response_text = result.content[0].text
+
+                await add_message_to_conversation(
+                    db,
+                    MessageCreate(
+                        role="function_call_result",
+                        content=response_text,
+                        model=model,
+                        provider=api_key.provider,
+                    ),
+                    conversation
+                )
+
                 formatted_messages.append({
-                    "role": "assistant",
-                    "content": f"""
-<tool_call_response>
-{result.content[0].text}
-</tool_call_response>
-"""
+                    "role": "function_call_result",
+                    "content": response_text,
                 })
 
     try:

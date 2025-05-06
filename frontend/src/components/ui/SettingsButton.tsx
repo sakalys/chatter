@@ -84,22 +84,22 @@ export function SettingsButton() {
 
       <Modal open={isMcpConfigModalOpen} onClose={() => setIsMcpConfigModalOpen(false)}      >
         <ModalBox
-              title="MCP Configuration"
+            title="MCP Configuration"
             width="md"
             height="auto">
             <ModalBody>
                 <McpConfigModal/>
             </ModalBody>
             <ModalFooter>
-        <div className="flex justify-end space-x-3">
-          <button
-            type="button"
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-            onClick={() => setIsMcpConfigModalOpen(false)}
-          >
-            Close
-          </button>
-        </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                  onClick={() => setIsMcpConfigModalOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
             </ModalFooter>
         </ModalBox>
       </Modal>

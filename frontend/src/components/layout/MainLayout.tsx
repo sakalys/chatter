@@ -5,7 +5,7 @@ import { Conversation } from '../../types';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../util/api';
-import { Menu } from '@headlessui/react';
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
 
 const fetchConversations = async (): Promise<Conversation[]> => {
@@ -111,7 +111,7 @@ export function MainLayout({ children }: PropsWithChildren) {
                         value={editedTitle}
                         onChange={handleTitleChange}
                         onBlur={() => handleTitleBlur(conversation.id)}
-                        onKeyPress={(e) => handleTitleKeyPress(e, conversation.id)}
+                        onKeyUp={(e) => handleTitleKeyPress(e, conversation.id)}
                         className="w-full bg-transparent outline-none border-none px-3 py-2 rounded-md"
                         autoFocus
                       />
@@ -128,38 +128,38 @@ export function MainLayout({ children }: PropsWithChildren) {
                     {!editingConversationId && (
                       <Menu as="div" className="relative inline-block text-left">
                         <div>
-                          <Menu.Button className="p-1 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100">
+                          <MenuButton className="p-1 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100">
                             <EllipsisVerticalIcon className="h-5 w-5" aria-hidden="true" />
-                          </Menu.Button>
+                          </MenuButton>
                         </div>
-                        <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                        <MenuItems className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                           <div className="py-1">
-                            <Menu.Item>
-                              {({ active }) => (
+                            <MenuItem>
+                              {({ focus }) => (
                                 <button
                                   className={`${
-                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                    focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
                                   } block w-full text-left px-4 py-2 text-sm`}
                                   onClick={() => handleRenameClick(conversation)}
                                 >
                                   Rename
                                 </button>
                               )}
-                            </Menu.Item>
-                            <Menu.Item>
-                              {({ active }) => (
+                            </MenuItem>
+                            <MenuItem>
+                              {({ focus }) => (
                                 <button
                                   className={`${
-                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                    focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
                                   } block w-full text-left px-4 py-2 text-sm`}
                                   onClick={() => handleDeleteClick(conversation.id)}
                                 >
                                   Delete
                                 </button>
                               )}
-                            </Menu.Item>
+                            </MenuItem>
                           </div>
-                        </Menu.Items>
+                        </MenuItems>
                       </Menu>
                     )}
                   </div>

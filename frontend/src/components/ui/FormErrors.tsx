@@ -51,7 +51,6 @@ export const getAlertContent = (error: string | Error, cleanFields: CleanFields,
         return [Variant.Danger, <>Failed contacting the server. The issue is most likely on our end, sorry.</>];
     } 
 
-
     if (!(error instanceof HttpError)) {
         return [Variant.Danger, <>Error: Server responded with an error</>];
     }
