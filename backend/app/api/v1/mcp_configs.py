@@ -18,6 +18,7 @@ from app.services.mcp_config import (
     update_mcp_config,
     get_available_mcp_tools, # Import the new service function
 )
+from result import is_err
 
 router = APIRouter()
 
@@ -95,7 +96,13 @@ async def update_user_mcp_config(
             detail="MCP configuration not found",
         )
     
-    mcp_config = await update_mcp_config(db, mcp_config, mcp_config_in)
+    result = await update_mcp_config(db, mcp_config, mcp_config_in)
+    if is_err(result):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.err_value,
+        )
+
     return mcp_config
 
 

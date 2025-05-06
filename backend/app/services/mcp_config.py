@@ -1,4 +1,6 @@
+from typing import Literal
 import httpx
+from result import Ok, Err, Result, is_ok, is_err
 from uuid import UUID
 
 from app.models.mcp_tool import MCPTool
@@ -93,7 +95,7 @@ async def create_mcp_config(
 
 async def update_mcp_config(
     db: AsyncSession, mcp_config: MCPConfig, mcp_config_in: MCPConfigUpdate
-) -> MCPConfig:
+) -> Result[MCPConfig, str]:
     """
     Update an MCP configuration.
     
@@ -110,13 +112,20 @@ async def update_mcp_config(
     for field, value in update_data.items():
         setattr(mcp_config, field, value)
 
-    await update_tools(db, mcp_config)
+    result = await update_tools(db, mcp_config)
+    
+    if result.is_err():
+        return Err(str(result.err()))
 
     await db.commit()
     await db.refresh(mcp_config)
-    return mcp_config
 
-async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> None:
+    return Ok(mcp_config)
+
+class UpdateToolsException(Exception):
+    pass
+
+async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Literal[True], str]:
     """
     Update the tools for an MCP configuration.
     
@@ -124,26 +133,34 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> None:
         db: Database session
         mcp_config: MCP configuration object
     """
-    async with sse_client(mcp_config.url) as streams:
-        async with ClientSession(*streams) as session:
-            await session.initialize()
+    http_error = False
+    try:
+        async with sse_client(mcp_config.url) as streams:
+            async with ClientSession(*streams) as session:
+                await session.initialize()
 
-            result = await session.list_tools()
+                result = await session.list_tools()
 
-            # Delete existing tools
-            await db.execute(delete(MCPTool).where(MCPTool.mcp_config_id == mcp_config.id))
+                # Delete existing tools
+                await db.execute(delete(MCPTool).where(MCPTool.mcp_config_id == mcp_config.id))
 
-            # Add new tools
-            for tool_data in result.tools:
-                tool = MCPTool(
-                    mcp_config=mcp_config,
-                    name=tool_data.name,
-                    description=tool_data.description,
-                    inputSchema=tool_data.inputSchema,
-                )
-                db.add(tool)
+                # Add new tools
+                for tool_data in result.tools:
+                    tool = MCPTool(
+                        mcp_config=mcp_config,
+                        name=tool_data.name,
+                        description=tool_data.description,
+                        inputSchema=tool_data.inputSchema,
+                    )
+                    db.add(tool)
 
-            await db.commit()
+                await db.commit()
+                return Ok(True)
+    except* (httpx.HTTPStatusError, httpx.ConnectError) as e:
+        http_error = True
+
+    if http_error:
+        return Err("Server URL does not seem to be a valid SSE url")
 
 
 async def create_mcp_tool(
