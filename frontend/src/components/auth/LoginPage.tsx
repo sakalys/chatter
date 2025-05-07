@@ -99,7 +99,7 @@ const LoginPage = () => {
             <h1 className="text-2xl font-bold mb-4">Welcome</h1>
             <p className="text-gray-600">We have the following soon-to-be-fixed limitations right now:</p>
             <ul className="list-disc list-inside mt-4">
-              <li className="text-gray-600">Multiple tool calling</li>
+              <li className="text-gray-600">MCP server authorization</li>
             </ul>
           </div>
         </div>

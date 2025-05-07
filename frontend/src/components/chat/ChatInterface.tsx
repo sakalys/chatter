@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById, McpTool } from '../../types'; // Import McpTool
+import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById } from '../../types'; // Import McpTool
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { toast } from 'react-toastify';
@@ -20,12 +20,6 @@ const fetchMessages = async (conversationId: string | undefined): Promise<Messag
 const fetchApiKeys = async (): Promise<ApiKey[]> => {
   return apiFetch<ApiKey[]>('GET', '/api-keys');
 };
-
-// New fetch function for MCP tools
-const fetchMcpTools = async (): Promise<McpTool[]> => {
-  return apiFetch<McpTool[]>('GET', '/mcp-configs/tools');
-};
-
 
 export function ChatInterface() {
   const { id: routeConversationId } = useParams<{ id: string }>();
@@ -66,14 +60,6 @@ export function ChatInterface() {
     queryFn: fetchApiKeys,
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
-
-  // Fetch MCP tools using React Query
-  const { data: mcpTools, isLoading: isLoadingMcpTools, refetch: refetchMcpTools } = useQuery<McpTool[], Error>({
-    queryKey: ['mcpTools'],
-    queryFn: fetchMcpTools,
-    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
-  });
-
 
   // Update messages state when fetchedMessages changes
   useEffect(() => {

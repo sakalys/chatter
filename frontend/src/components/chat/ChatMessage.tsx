@@ -1,8 +1,11 @@
 import ReactMarkdown from 'react-markdown';
+import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter'
+import {dark} from 'react-syntax-highlighter/dist/esm/styles/prism'
 import remarkGfm from 'remark-gfm';
 import { Nl2p } from './ChatInterface';
 import { MCPToolUse, Model } from '../../types';
 import { ToolCallMessage } from './ToolCallMessage';
+import { PropsWithChildren } from 'react';
 
 export type MessageRole = 'user' | 'assistant' | 'system' | 'function_call' | 'auth_error';
 
@@ -70,9 +73,7 @@ export function ChatMessage({ role, content, model, toolCall, onDecision, disabl
                 ) : toolCall ? (
                   <ToolCallMessage toolCall={toolCall} onDecision={onDecision} disabled={disabledToolCall}/>
                 ) : (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {content}
-                  </ReactMarkdown>
+                  <Markdown content={content}/>
                 )}
               </div>
             </div>
@@ -81,6 +82,35 @@ export function ChatMessage({ role, content, model, toolCall, onDecision, disabl
       </div>
     </div>
   );
+}
+
+export function Markdown({content}: {content: string}) {
+  return (
+                  <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code(props) {
+                      const {children, className, node, ...rest} = props
+                      const match = /language-(\w+)/.exec(className || '')
+                      return match ? (
+                        <SyntaxHighlighter
+                          {...rest}
+                          PreTag="div"
+                          children={String(children).replace(/\n$/, '')}
+                          language={match[1]}
+                          style={dark}
+                        />
+                      ) : (
+                        <code {...rest} className={className}>
+                          {children}
+                        </code>
+                      )
+                    }
+                  }}
+                  >
+                    {content}
+                  </ReactMarkdown>
+  )
 }
 
 export function IncomingMessage({incomingMessage, model}: {incomingMessage: string, model: Model}) {
@@ -106,9 +136,7 @@ export function IncomingMessage({incomingMessage, model}: {incomingMessage: stri
                     <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                   </div>
                 ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {incomingMessage}
-                </ReactMarkdown>
+                  <Markdown content={incomingMessage}/>
                 )}
               </div>
             </div>
@@ -138,9 +166,7 @@ export function OutgoingMessage ({ content }: {
             </div>
             <div className="mt-1 text-sm text-gray-700">
               <div className="prose prose-sm">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {content}
-                </ReactMarkdown>
+                <Markdown content={content}/>
               </div>
             </div>
           </div>

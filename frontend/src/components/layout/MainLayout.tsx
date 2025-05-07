@@ -174,7 +174,7 @@ export function MainLayout({ children }: PropsWithChildren) {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 flex flex-col h-full relative">
+          <div className="flex-1 flex flex-col h-full relative min-w-0">
             {children} {/* Render children */}
           </div>
     </div>
