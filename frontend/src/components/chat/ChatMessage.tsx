@@ -126,7 +126,7 @@ export function IncomingMessage({incomingMessage, model}: {incomingMessage: stri
           </div>
           <div className="ml-3 flex-1">
             <div className="flex items-center">
-              <p className="text-sm font-medium text-gray-900">{model.name || 'Assistant'}</p>
+              <p className="text-sm font-medium text-gray-900">{model.id || 'Assistant'}</p>
             </div>
             <div className="mt-1 text-sm text-gray-700">
               <div className="prose prose-sm">

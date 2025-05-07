@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, apiFetchStreaming } from '../../util/api';
 import { useNewConversation } from '../../context/NewConversationContext';
+import { useMCPConfig } from '../../context/MCPConfigContext';
 
 const fetchMessages = async (conversationId: string | undefined): Promise<Message[]> => {
   if (!conversationId) {
@@ -284,6 +285,8 @@ export function ChatInterface() {
     handleSendMessage('', toolDecide);
   };
 
+  const mcpCtx = useMCPConfig();
+
   const debug = false;
 
   return (
@@ -309,12 +312,23 @@ export function ChatInterface() {
                   <p className="text-lg">...a platform for interacting with AI models and MCP tools of your choice.</p>
                 </div>
               </div>
-              <p className="text-lg mb-4">Please configure your API keys to start chatting</p>
+              <p className="text-lg mb-4">Configure your API keys and MCP servers to start chatting</p>
               <button
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 onClick={() => setIsApiKeyModalOpen(true)}
               >
                 Setup API Keys
+              </button>
+
+              &nbsp;
+              &nbsp;
+              &nbsp;
+
+              <button
+                className="px-4 py-2 bg-zinc-500 text-white rounded hover:bg-blue-600"
+                onClick={() => mcpCtx.setIsMCPConfigModalOpen(true)}
+              >
+                Setup MCP Servers
               </button>
             </div>
           </div>
@@ -364,7 +378,7 @@ export function ChatInterface() {
           selectedModel={selectedModel}
           onModelChange={handleModelChange}
         />
-        {/* API Key Manager Modal */}
+
         <ApiKeyManagerModal
           isOpen={isApiKeyModalOpen}
           onClose={() => setIsApiKeyModalOpen(false)}

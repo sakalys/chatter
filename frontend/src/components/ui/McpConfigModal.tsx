@@ -134,12 +134,12 @@ export function McpConfigModal() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    URL
+                    SSE endpoint URL
                   </label>
                   <input
                     type="text"
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., https://example.com/mcp"
+                    placeholder="e.g., https://example.com/sse"
                     value={editingConfig.url}
                     required
                     onChange={(e) => setEditingConfig({...editingConfig, url: e.target.value})}

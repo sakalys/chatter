@@ -1,7 +1,6 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { GoogleLogin } from '@react-oauth/google';
+import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 
@@ -71,7 +70,7 @@ const LoginPage = () => {
   });
 
 
-  const handleGoogleLoginSuccess = (credentialResponse: any) => {
+  const handleGoogleLoginSuccess = (credentialResponse: CredentialResponse) => {
     console.log('Google login successful:', credentialResponse);
     if (credentialResponse.credential) {
       googleLoginMutation.mutate(credentialResponse.credential);
@@ -93,21 +92,16 @@ const LoginPage = () => {
 
   return (
     <div className='flex flex-col sm:flex-row h-full'>
-      <div className="bg-white sm:flex-1 flex items-center justify-center">
-        <div className="shadow-md p-4 py-8 text-center">
-          <div className="">
-            <h1 className="text-2xl font-bold mb-4">Welcome</h1>
-            <p className="text-gray-600">We have the following soon-to-be-fixed limitations right now:</p>
-            <ul className="list-disc list-inside mt-4">
-              <li className="text-gray-600">MCP server authorization</li>
-            </ul>
-          </div>
+      <div className="bg-white sm:flex-1 flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <h1 className="text-3xl font-bold text-gray-800 mb-6">Welcome to Moo Point</h1>
+          <p className="text-lg text-gray-700 mb-4">...a platform for interacting with AI models and MCP tools <u>of your choice</u></p>
         </div>
+
       </div>
       <div className="flex sm:flex-2 items-center justify-center grow bg-gradient-to-br from-gray-900 to-black p-6">
-        <div className="relative px-8 py-10 bg-gray-800 bg-opacity-70 backdrop-filter backdrop-blur-lg shadow-2xl rounded-xl w-full max-w-md border border-gray-700">
+        <div className="mt-[-200px] sm:mt-0 relative px-8 py-10 bg-gray-800 bg-opacity-70 backdrop-filter backdrop-blur-lg shadow-2xl rounded-xl w-full max-w-md border border-gray-700">
           <div className="text-center mb-8">
-            <h1 className="text-5xl font-extrabold text-white mb-3 tracking-tight">Moo Point</h1>
             <h3 className="text-xl font-semibold text-gray-300">Login to your account</h3>
           </div>
           <div className="flex flex-col items-center space-y-4">

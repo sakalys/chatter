@@ -14,8 +14,8 @@ interface ChatInputProps {
 const defaultMsg = '';
 // const defaultMsg = "what's the weather like in Klaipeda?";
 
-export function ChatInput({ 
-  onSendMessage, 
+export function ChatInput({
+  onSendMessage,
   isLoading = false,
   selectedModel,
   onModelChange,
@@ -23,7 +23,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const [message, setMessage] = useState(defaultMsg);
 
-  const availableModels = AVAILABLE_MODELS.filter(model => 
+  const availableModels = AVAILABLE_MODELS.filter(model =>
     configuredProviders.includes(model.provider)
   );
 
@@ -44,7 +44,9 @@ export function ChatInput({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      if (!isLoading) {
+        handleSubmit(e);
+      }
     }
   };
 
@@ -59,7 +61,6 @@ export function ChatInput({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isLoading}
           />
           <button
             type="submit"

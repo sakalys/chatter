@@ -6,13 +6,14 @@ import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../util/api';
 import { useNavigate } from 'react-router-dom';
 import { Modal, ModalBody, ModalBox, ModalFooter } from './modal';
+import { useMCPConfig } from '../../context/MCPConfigContext';
 
 export function SettingsButton() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [isMcpConfigModalOpen, setIsMcpConfigModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const auth = useAuth();
+  const mcpCtx = useMCPConfig();
 
   // Use useMutation for logout
   const logoutMutation = useMutation<void, Error>({
@@ -61,7 +62,7 @@ export function SettingsButton() {
           <button
             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             onClick={() => {
-              setIsMcpConfigModalOpen(true);
+              mcpCtx.setIsMCPConfigModalOpen(true);
               setIsDropdownOpen(false);
             }}
           >
@@ -81,28 +82,6 @@ export function SettingsButton() {
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
       />
-
-      <Modal open={isMcpConfigModalOpen} onClose={() => setIsMcpConfigModalOpen(false)}      >
-        <ModalBox
-            title="MCP Configuration"
-            width="md"
-            height="auto">
-            <ModalBody>
-                <McpConfigModal/>
-            </ModalBody>
-            <ModalFooter>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={() => setIsMcpConfigModalOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </ModalFooter>
-        </ModalBox>
-      </Modal>
     </div>
   );
 }

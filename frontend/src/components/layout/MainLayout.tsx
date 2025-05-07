@@ -1,4 +1,4 @@
-import { PropsWithChildren, useState, KeyboardEvent } from 'react';
+import { PropsWithChildren, useState, KeyboardEvent, createContext, useContext } from 'react';
 import { NewChatState, NewConversationContext } from '../../context/NewConversationContext';
 import { SettingsButton } from '../ui/SettingsButton';
 import { Conversation } from '../../types';
@@ -7,6 +7,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../util/api';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
+import { MCPConfigContext } from '../../context/MCPConfigContext';
+import { Modal, ModalBody, ModalBox, ModalFooter } from '../ui/modal';
+import { McpConfigModal } from '../ui/McpConfigModal';
 
 const fetchConversations = async (): Promise<Conversation[]> => {
   return apiFetch<Conversation[]>('GET', '/conversations');
@@ -79,8 +82,11 @@ export function MainLayout({ children }: PropsWithChildren) {
   };
 
 
+  const [isMCPConfigModalOpen, setIsMCPConfigModalOpen] = useState(false);
+
   return (
     <NewConversationContext.Provider value={{ newChatState, setNewChatState, refetchConversations: refetch }}>
+      <MCPConfigContext.Provider value={{isMCPConfigModalOpen, setIsMCPConfigModalOpen: (open) => setIsMCPConfigModalOpen(open)}}>
     <div className="flex h-full bg-gray-100">
           {/* Sidebar */}
           <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
@@ -177,7 +183,30 @@ export function MainLayout({ children }: PropsWithChildren) {
           <div className="flex-1 flex flex-col h-full relative min-w-0">
             {children} {/* Render children */}
           </div>
+
+      <Modal open={isMCPConfigModalOpen} onClose={() => setIsMCPConfigModalOpen(false)}>
+        <ModalBox
+            title="MCP Configuration"
+            width="md"
+            height="auto">
+            <ModalBody>
+                <McpConfigModal/>
+            </ModalBody>
+            <ModalFooter>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                  onClick={() => setIsMCPConfigModalOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </ModalFooter>
+        </ModalBox>
+      </Modal>
     </div>
+      </MCPConfigContext.Provider>
     </NewConversationContext.Provider >
   );
 }
