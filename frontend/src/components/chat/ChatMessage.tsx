@@ -5,7 +5,6 @@ import remarkGfm from 'remark-gfm';
 import { Nl2p } from './ChatInterface';
 import { MCPToolUse, Model } from '../../types';
 import { ToolCallMessage } from './ToolCallMessage';
-import { PropsWithChildren } from 'react';
 
 export type MessageRole = 'user' | 'assistant' | 'system' | 'function_call' | 'auth_error';
 

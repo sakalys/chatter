@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById } from '../../types'; // Import McpTool
+import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById } from '../../types';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { toast } from 'react-toastify';
@@ -211,6 +211,7 @@ export function ChatInterface() {
               const message: Message = JSON.parse(eventData);
 
               setMessages(prev => [...prev, message]);
+              setIncomingMessage(null);
 
             } else if (eventType === 'function_call' && typeof eventData === 'string') {
               const message: Message = JSON.parse(eventData);
@@ -302,6 +303,12 @@ export function ChatInterface() {
         {showNoModelsOverlay && (
           <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
             <div className="text-center p-4">
+              <div className="flex justify-center items-center mb-8">
+                <div className="text-center text-gray-500">
+                  <h1 className="text-2xl font-bold mb-4">Welcome to Moo Point!</h1>
+                  <p className="text-lg">...a platform for interacting with AI models and MCP tools of your choice.</p>
+                </div>
+              </div>
               <p className="text-lg mb-4">Please configure your API keys to start chatting</p>
               <button
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
