@@ -87,6 +87,10 @@ async def _generate_litellm_response(
         tools.append(openai_tool)
 
     formatted_messages: list[Any] = []
+    formatted_messages.append( {
+        "role": "system",
+        "content": "Remember... If a question is unrelated to functions provided to you, use your intrinsic knowledge to anwer the question.",
+    })
     for msg in messages:
         if "content" in msg:
             if msg["role"] == "user":
@@ -307,7 +311,6 @@ async def handle_chat_request(
             api_key=decrypted_key,  # Pass the decrypted key directly
             provider=api_key.provider,  # Pass the provider separately
         )
-        logger.debug(f"Finished generate_chat_response. Response type: {type(response)}")
             
         async def event_generator():
             if created_user_message_id:
