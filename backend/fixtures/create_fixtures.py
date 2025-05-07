@@ -173,9 +173,9 @@ async def create_mcp_config_fixture(db: AsyncSession, user: User) -> MCPConfig:
         configuration=None, # Assuming no additional configuration needed for this fixture
     )
 
-    mcp_config = await create_mcp_config(db, mcp_config_in, user, fetch_tools=False)
+    mcp_config_result = await create_mcp_config(db, mcp_config_in, user, fetch_tools=False)
 
-    return mcp_config
+    return mcp_config_result.unwrap()
 
 
 async def create_mcp_tool_fixtures(db: AsyncSession, mcp_config: MCPConfig) -> Sequence[MCPTool]:

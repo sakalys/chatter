@@ -57,9 +57,15 @@ async def create_user_mcp_config(
     """
     Create a new MCP configuration for the current user.
     """
-    mcp_config = await create_mcp_config(db, mcp_config_in, current_user)
-    return mcp_config
+    result = await create_mcp_config(db, mcp_config_in, current_user)
 
+    if is_err(result):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.err_value,
+        )
+
+    return result.unwrap()
 
 @router.get("/{mcp_config_id}", response_model=MCPConfigResponse)
 async def read_mcp_config(

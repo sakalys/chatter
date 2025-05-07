@@ -18,7 +18,6 @@ export function McpConfigModal() {
   const { data: fetchedMcpConfigs, error: mcpConfigsError } = useQuery<McpConfig[], Error>({
     queryKey: ['mcp-configs'],
     queryFn: () => apiFetch<McpConfig[]>('GET', '/mcp-configs'),
-    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
   });
 
   useEffect(() => {
@@ -56,6 +55,11 @@ export function McpConfigModal() {
     }
   });
 
+  const reset = saveConfig.reset;
+
+  useEffect(() => {
+    reset();
+  }, [editingConfig, reset]);
 
   const deleteConfig = useMutation<void, DefaultError, string>({
     mutationFn: (id) => apiFetch('DELETE', `/mcp-configs/${id}`),
@@ -157,7 +161,7 @@ export function McpConfigModal() {
                     <button
                       type="button"
                       className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md"
-                      onClick={() => confirm('Are you sure?') && deleteConfig.mutate(editingConfig.id)}
+                      onClick={() => confirm('Are you sure?') && editingConfig.id && deleteConfig.mutate(editingConfig.id)}
                     >
                       Delete
                     </button>

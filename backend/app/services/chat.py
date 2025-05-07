@@ -4,7 +4,7 @@ from re import S
 from typing import Any, AsyncGenerator, Literal, Union
 from uuid import UUID
 from app.models.mcp_tool_use import MCPToolUse, ToolUseState
-from litellm import acompletion
+from litellm import CustomStreamWrapper, acompletion
 
 from fastapi import HTTPException, status
 import litellm
@@ -154,6 +154,9 @@ async def _generate_litellm_response(
         )
 
         unfinished_call = None
+        
+        if not isinstance(stream, CustomStreamWrapper):
+            raise
 
         async for chunk in stream:
             if not chunk.choices or not chunk.choices[0].delta:

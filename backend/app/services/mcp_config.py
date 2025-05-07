@@ -63,7 +63,7 @@ async def create_mcp_config(
     mcp_config_in: MCPConfigCreate,
     user: User,
     fetch_tools: bool = True,
-) -> MCPConfig:
+) -> Result[MCPConfig, str]:
     """
     Create a new MCP configuration.
 
@@ -84,13 +84,16 @@ async def create_mcp_config(
     )
 
     if fetch_tools:
-        await update_tools(db, mcp_config)
+        result = await update_tools(db, mcp_config)
+
+        if result.is_err():
+            return Err(str(result.err()))
 
     db.add(mcp_config)
     await db.commit()
     await db.refresh(mcp_config)
 
-    return mcp_config
+    return Ok(mcp_config)
 
 
 async def update_mcp_config(
@@ -133,7 +136,7 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Litera
         db: Database session
         mcp_config: MCP configuration object
     """
-    http_error = False
+    url_error = False
     try:
         async with sse_client(mcp_config.url) as streams:
             async with ClientSession(*streams) as session:
@@ -155,13 +158,14 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Litera
                     db.add(tool)
 
                 await db.commit()
-                return Ok(True)
-    except* (httpx.HTTPStatusError, httpx.ConnectError) as e:
-        http_error = True
 
-    if http_error:
+    except* (httpx.RequestError) as e:
+        url_error = True
+
+    if url_error:
         return Err("Server URL does not seem to be a valid SSE url")
 
+    return Ok(True)
 
 async def create_mcp_tool(
     db: AsyncSession,
