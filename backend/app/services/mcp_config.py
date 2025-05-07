@@ -159,7 +159,7 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Litera
 
                 await db.commit()
 
-    except* (httpx.RequestError) as e:
+    except* (httpx.HTTPError) as e:
         url_error = True
 
     if url_error:
