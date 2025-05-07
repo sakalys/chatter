@@ -539,7 +539,7 @@ async def generate_and_set_conversation_title(
     logger.debug(f"Generating title for conversation: {conversation.id}")
 
     # Construct prompt for title generation
-    prompt = f"Generate a short, concise title (under 10 words) for the following conversation based on the user's initial message and the assistant's response:\n\nUser: {user_message}\nAssistant: {assistant_message}\n\nTitle:"
+    prompt = f"Generate a short, concise title (under 10 words) for the following conversation based on the user's initial message and the assistant's response (use plain text for the output. Do not use JSON or anything similar!):\n\nUser: {user_message}\nAssistant: {assistant_message}\n\nTitle:"
 
     title = ''
     try:
