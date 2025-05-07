@@ -1,19 +1,16 @@
 import { useState } from 'react';
-import { ApiKeyManagerModal } from './ApiKeyManagerModal';
-import { McpConfigModal } from './McpConfigModal';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../util/api';
 import { useNavigate } from 'react-router-dom';
-import { Modal, ModalBody, ModalBox, ModalFooter } from './modal';
-import { useMCPConfig } from '../../context/MCPConfigContext';
+import { useGlobalSettings } from '../../context/GlobaSettingsContext';
 
 export function SettingsButton() {
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const settingsCtx = useGlobalSettings();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const auth = useAuth();
-  const mcpCtx = useMCPConfig();
+  const mcpCtx = useGlobalSettings();
 
   // Use useMutation for logout
   const logoutMutation = useMutation<void, Error>({
@@ -53,7 +50,7 @@ export function SettingsButton() {
           <button
             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             onClick={() => {
-              setIsApiKeyModalOpen(true);
+              settingsCtx.setIsApiKeyModalOpen(true);
               setIsDropdownOpen(false);
             }}
           >
@@ -77,11 +74,6 @@ export function SettingsButton() {
           </button>
         </div>
       )}
-
-      <ApiKeyManagerModal
-        isOpen={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
-      />
     </div>
   );
 }

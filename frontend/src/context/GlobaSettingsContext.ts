@@ -1,12 +1,14 @@
 import { createContext, useContext } from "react";
 
-export const MCPConfigContext = createContext<{
+export const GlobalSettingsContext = createContext<{
+isApiKeyModalOpen: boolean, 
+setIsApiKeyModalOpen(open: boolean): unknown;
 isMCPConfigModalOpen: boolean, 
 setIsMCPConfigModalOpen(open: boolean): void
 } | null>(null)
 
-export function useMCPConfig () {
-  const ctx = useContext(MCPConfigContext);
+export function useGlobalSettings () {
+  const ctx = useContext(GlobalSettingsContext);
 
   if (!ctx) {
     throw new Error('MCPConfigContext not found');

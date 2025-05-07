@@ -3,13 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById } from '../../types';
-import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { toast } from 'react-toastify';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, apiFetchStreaming } from '../../util/api';
 import { useNewConversation } from '../../context/NewConversationContext';
-import { useMCPConfig } from '../../context/MCPConfigContext';
+import { useGlobalSettings } from '../../context/GlobaSettingsContext';
 
 const fetchMessages = async (conversationId: string | undefined): Promise<Message[]> => {
   if (!conversationId) {
@@ -30,7 +29,6 @@ export function ChatInterface() {
   const [outgoingMessage, setOutgoingMessage] = useState<MessageCreate | null>(null);
   const [incomingMessage, setIncomingMessage] = useState<{ message: string, model: Model } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [showNoModelsOverlay, setShowNoModelsOverlay] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model>(() => {
     const storedModelId = localStorage.getItem('selectedModelId');
@@ -104,6 +102,7 @@ export function ChatInterface() {
     }
   }, [conversationId, setNewChatState]);
 
+  const settingsCtx = useGlobalSettings();
 
   const handleSendMessage = async (content: string, toolDecision: boolean | null = null) => {
     // Prevent sending message if API keys are not loaded
@@ -138,7 +137,7 @@ export function ChatInterface() {
 
       if (!apiKey) {
         toast.error(`API key not found for provider: ${provider}`);
-        setIsApiKeyModalOpen(true); // Prompt user to enter API key
+        settingsCtx.setIsApiKeyModalOpen(true); // Prompt user to enter API key
         setIsLoading(false);
         return; // Stop processing if API key is missing
       }
@@ -285,7 +284,7 @@ export function ChatInterface() {
     handleSendMessage('', toolDecide);
   };
 
-  const mcpCtx = useMCPConfig();
+  const mcpCtx = useGlobalSettings();
 
   const debug = false;
 
@@ -315,7 +314,7 @@ export function ChatInterface() {
               <p className="text-lg mb-4">Configure your API keys and MCP servers to start chatting</p>
               <button
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                onClick={() => setIsApiKeyModalOpen(true)}
+                onClick={() => settingsCtx.setIsApiKeyModalOpen(true)}
               >
                 Setup API Keys
               </button>
@@ -377,11 +376,6 @@ export function ChatInterface() {
           configuredProviders={configuredProviders}
           selectedModel={selectedModel}
           onModelChange={handleModelChange}
-        />
-
-        <ApiKeyManagerModal
-          isOpen={isApiKeyModalOpen}
-          onClose={() => setIsApiKeyModalOpen(false)}
         />
       </div>
     </div>

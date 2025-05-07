@@ -79,8 +79,8 @@ export function McpConfigModal() {
             <div className="space-y-4">
             <FormErrors error={mcpConfigsError}/>
               {configs.map((config) => (
-                <div key={config.id} className="border border-gray-200 rounded-md p-4 flex flex-col"> {/* Changed to flex-col */}
-                  <div className="flex justify-between items-center mb-2"> {/* Added flex container for name/url and edit button */}
+                <div key={config.id} className="border border-gray-200 rounded-md p-4 flex flex-col">
+                  <div className="flex justify-between items-center mb-2">
                     <div className="min-w-0 mr-2">
                       <div className="font-medium text-gray-900 overflow-hidden text-ellipsis whitespace-nowrap">{config.name || 'Unnamed Configuration'}</div>
                       <div className="text-sm text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{config.url || 'No URL'}</div>
@@ -95,18 +95,20 @@ export function McpConfigModal() {
                   </div>
 
                   {/* Display tools for this config */}
-                  <ConfigToolsDisplay configId={config.id}/> {/* New component to display tools */}
+                  <ConfigToolsDisplay configId={config.id}/>
 
                 </div>
               ))}
 
-              <button
-                type="button"
-                className="w-full py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                onClick={addConfig}
-              >
-                Add MCP Configuration
-              </button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  className="w-full py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 max-w-60"
+                  onClick={addConfig}
+                >
+                  Add MCP Configuration
+                </button>
+              </div>
             </div>
           ) : (
             // Edit Form View
