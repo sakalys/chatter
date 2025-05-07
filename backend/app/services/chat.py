@@ -12,6 +12,7 @@ from openai import AuthenticationError
 from sse_starlette.sse import EventSourceResponse
 from mcp import ClientSession
 from mcp.client.sse import sse_client
+from mcp.types import TextContent
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,6 +52,48 @@ class FunctionCall(BaseModel):
     def __str__(self):
         return f"FunctionCall(name={self.name}, arguments={self.arguments})"
 
+def _format_mcp_tools_for_openai(mcp_tools: list[MCPTool]) -> list[dict[str, Any]]:
+    """
+    Converts a list of MCPTool objects to the OpenAI tools format.
+    Also cleans up the parameters by replacing "format": "uri" with "format": "string" for string types.
+    """
+    tools = []
+    for tool in mcp_tools:
+        function_parameters = {
+            k: v
+            for k, v in tool.inputSchema.items()
+            if k not in ["additionalProperties", "$schema"]
+        }
+
+        properties = function_parameters["properties"] or {}
+
+        cleaned_properties = properties.copy()
+
+        for property_name, property_schema in cleaned_properties.items():
+            cleaned_property_schema = property_schema.copy()
+            if isinstance(property_schema, dict):
+
+                # see https://spec.openapis.org/oas/v3.0.3#schema
+                # see https://github.com/lastmile-ai/mcp-agent/issues/93
+                if property_schema.get("type") == "string" and property_schema.get("format") == "uri":
+                    del cleaned_property_schema["format"]
+
+            cleaned_properties[property_name] = cleaned_property_schema
+        
+        function_parameters['properties'] = cleaned_properties
+
+        openai_tool = {
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": function_parameters,
+            },
+        }
+        tools.append(openai_tool)
+
+    return tools
+
 async def _generate_litellm_response(
     provider: str,
     messages: list[dict[str, str]],
@@ -66,25 +109,11 @@ async def _generate_litellm_response(
         model: Model to use for generation
 
     Returns:
-        Streaming response 
+        Streaming response
     """
 
     # Convert MCP tools to OpenAI tools format
-    tools = []
-    for tool in mcp_tools:
-        openai_tool = {
-            "type": "function",
-            "function": {
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": {
-                    k: v
-                    for k, v in tool.inputSchema.items()
-                    if k not in ["additionalProperties", "$schema"]
-                },
-            },
-        }
-        tools.append(openai_tool)
+    tools = _format_mcp_tools_for_openai(mcp_tools)
 
     formatted_messages: list[Any] = []
     formatted_messages.append( {
@@ -127,12 +156,13 @@ async def _generate_litellm_response(
         unfinished_call = None
 
         async for chunk in stream:
-            if not chunk.choices:
+            if not chunk.choices or not chunk.choices[0].delta:
                 continue
 
-            if chunk.choices[0].delta.tool_calls:
+            delta = chunk.choices[0].delta
 
-                tool_call = chunk.choices[0].delta.tool_calls[0]
+            if delta.tool_calls:
+                tool_call = delta.tool_calls[0]
 
                 # having an id, indicates a new function call
                 if tool_call.id is not None:
@@ -160,8 +190,8 @@ async def _generate_litellm_response(
 
                     unfinished_call["arguments"] += function_call.arguments or ""
             
-            if chunk.choices[0].delta.content is not None:
-                yield StreamEvent("text", chunk.choices[0].delta.content)
+            if delta.content is not None:
+                yield StreamEvent("text", delta.content)
 
         if unfinished_call is not None and unfinished_call["name"] != "":
             call = FunctionCall(
@@ -465,7 +495,19 @@ async def handle_tool_call(db: AsyncSession, tool_use: MCPToolUse, tool_decision
                 arguments=tool_use.args
             )
 
-            response_text = result.content[0].text
+            response_text = ""
+            if result and result.content:
+                for content_item in result.content:
+                    # Explicitly check if the content_item is a text content type
+                    # Assuming TextContent is a valid type in the mcp library
+                    if isinstance(content_item, TextContent) and content_item.text is not None:
+                         response_text += content_item.text
+                    # You might want to handle other content types here if necessary
+                    # elif isinstance(content_item, ImageContent) and content_item.image_url is not None:
+                    #     response_text += f"[Image: {content_item.image_url}]"
+                    # elif isinstance(content_item, ResourceContent) and content_item.resource_url is not None:
+                    #     response_text += f"[Resource: {content_item.resource_url}]"
+
 
             await add_message_to_conversation(
                 db,
