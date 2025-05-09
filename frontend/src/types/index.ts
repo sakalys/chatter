@@ -93,7 +93,7 @@ export const AVAILABLE_MODELS: Model[] = [
     requiresApiKey: true
   },
   {
-    id: 'gemini-2.5-pro-preview-03-25',
+    id: 'gemini-2.5-pro-preview-05-06',
     name: 'Gemini 2.5 Pro',
     provider: LLMProvider.Gemini,
     description: 'Google\'s advanced Gemini model',
