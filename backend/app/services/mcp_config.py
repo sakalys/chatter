@@ -13,7 +13,7 @@ from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
 from app.schemas.mcp_tool import McpTool # Import McpTool schema
 
 from mcp import ClientSession
-from mcp.client.sse import sse_client
+from mcp.client.streamable_http import streamablehttp_client
 
 async def get_mcp_configs_by_user(
     db: AsyncSession,
@@ -138,8 +138,8 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Litera
     """
     url_error = False
     try:
-        async with sse_client(mcp_config.url) as streams:
-            async with ClientSession(*streams) as session:
+        async with streamablehttp_client(mcp_config.url) as (readable_stream, writable_stream, _):
+            async with ClientSession(readable_stream, writable_stream) as session:
                 await session.initialize()
 
                 result = await session.list_tools()

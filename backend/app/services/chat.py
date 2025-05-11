@@ -11,7 +11,7 @@ import litellm
 from openai import AuthenticationError
 from sse_starlette.sse import EventSourceResponse
 from mcp import ClientSession
-from mcp.client.sse import sse_client
+from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -489,8 +489,8 @@ async def handle_tool_call(db: AsyncSession, tool_use: MCPToolUse, tool_decision
     await db.commit()
 
     # call the tool
-    async with sse_client(mcp_config.url) as streams:
-        async with ClientSession(*streams) as session:
+    async with streamablehttp_client(mcp_config.url) as (read_stream, write_stream, _):
+        async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
             result = await session.call_tool(
