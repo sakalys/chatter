@@ -1,5 +1,6 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import api_router
@@ -24,6 +25,13 @@ app = FastAPI(
     description=settings.api_description,
     version=settings.api_version,
 )
+
+@app.exception_handler(Exception)
+async def unicorn_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"message": f"An error happened on our end. Try again later."},
+    )
 
 # Configure CORS
 app.add_middleware(

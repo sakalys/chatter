@@ -1,3 +1,4 @@
+from datetime import timedelta
 import json
 import logging
 from re import S
@@ -130,9 +131,9 @@ async def _generate_litellm_response(
                 formatted_messages.append({"role": "user", "content": f"System: {msg['content']}"})
             elif msg["role"] == "function_call":
                 formatted_messages.append({"role": "assistant", "content": f"""
-<tool_call>
+<tool_call_parameters>
     {msg['content']}
-</tool_call>
+</tool_call_parameters>
 """})
             elif msg["role"] == "function_call_result":
                 formatted_messages.append({"role": "assistant", "content": f"""
