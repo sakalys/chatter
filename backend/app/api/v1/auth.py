@@ -35,6 +35,12 @@ async def google_login(
             request_data.token, requests.Request(), settings.google_client_id
         )
 
+        if not idinfo.get('email_verified'):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Must use a verified email",
+            )
+
         # Extract user information
         user_email = idinfo['email']
         user_name = idinfo.get('name') # Name might not always be present
@@ -89,6 +95,12 @@ async def test_login(
     test_user_email = "test@example.com"
     user = await get_user_by_email(db, test_user_email)
 
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Test user not found",
+        )
+
     # Create access token for the test user
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
@@ -113,4 +125,4 @@ async def validate_token(
     Validate the current user's token.
     Returns 200 OK if the token is valid, 401 Unauthorized otherwise.
     """
-    return {"valid": True}
+    return {"valid": bool(current_user)}
