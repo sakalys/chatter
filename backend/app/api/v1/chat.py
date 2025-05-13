@@ -20,6 +20,7 @@ class ChatCompletionRequest(BaseModel):
     message: str
     model: str
     api_key_id: str
+    tool_calling: Optional[bool] = None
     tool_decision: Optional[bool] = None
 
 
@@ -68,6 +69,7 @@ async def generate_chat_response(
         user_message=request.message,
         model=request.model,
         api_key=api_key,
+        tool_calling=request.tool_calling if request.tool_calling is not None else True,
         tool_decision=request.tool_decision,
     )
     logger.debug("Finished handle_chat_request") # Log after calling service

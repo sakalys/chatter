@@ -145,14 +145,18 @@ async def _generate_litellm_response(
     litellm.drop_params = True
 
     try:
-        stream = await acompletion(
-            stream=True,
-            model=provider+"/"+model,
-            messages=formatted_messages,
-            tools=tools,
-            api_key=api_key,
-            parallel_tool_calls=False,
-        )
+        args = {
+            'stream' :True,
+            'model': provider+"/"+model,
+            'messages': formatted_messages,
+            'api_key':api_key,
+            'parallel_tool_calls':False,
+        }
+
+        if len(tools): # required for deepseek to not provide the tools array, even if empty
+            args['tools'] = tools;
+
+        stream = await acompletion(**args)
 
         unfinished_call = None
         
@@ -215,6 +219,7 @@ async def generate_chat_response(
     model: str,
     api_key: str,  # Changed to expect decrypted key string
     provider: str,  # Added provider parameter
+    tool_calling: bool
 ) -> AsyncGenerator[StreamEvent, None]:
     """
     Generate a chat response from an LLM provider.
@@ -232,10 +237,11 @@ async def generate_chat_response(
     
     all_mcp_tools: list[MCPTool] = []
 
-    configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
+    if tool_calling:
+        configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
 
-    for config in configs:
-        all_mcp_tools.extend(await config.awaitable_attrs.tools)
+        for config in configs:
+            all_mcp_tools.extend(await config.awaitable_attrs.tools)
 
     response = _generate_litellm_response(provider, messages, model, api_key, all_mcp_tools) # Pass mcp_tools to OpenAI function
     return response
@@ -246,6 +252,7 @@ async def handle_chat_request(
     user_message: str,
     model: str,
     api_key: ApiKey,
+    tool_calling: bool,
     conversation_id: UUID | None = None,
     tool_decision: bool | None = None,
 ) -> Any:
@@ -335,7 +342,6 @@ async def handle_chat_request(
         })
 
     try:
-        logger.debug("Calling generate_chat_response")
         # Decrypt the API key before passing it to generate_chat_response
         decrypted_key = decrypt_api_key(api_key.key_reference)
         
@@ -346,6 +352,7 @@ async def handle_chat_request(
             model=model,
             api_key=decrypted_key,  # Pass the decrypted key directly
             provider=api_key.provider,  # Pass the provider separately
+            tool_calling=tool_calling,
         )
             
         async def event_generator():

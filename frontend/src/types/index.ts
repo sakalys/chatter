@@ -55,6 +55,8 @@ export interface Model {
   provider: LLMProvider
   description: string;
   requiresApiKey: boolean;
+  supportToolCalling?: boolean
+  reasoning?: boolean // is a resoning model
 }
 
 export interface ChatCompletionRequest {
@@ -148,19 +150,21 @@ export const AVAILABLE_MODELS: Model[] = [
     description: '',
     requiresApiKey: true
   },
-  {
-    id: 'deepseek-code',
-    name: 'Deepseek Coder',
-    provider: LLMProvider.Deepseek,
-    description: '',
-    requiresApiKey: true
-  },
+  // { // not sure what to do with this one
+  //   id: 'deepseek-code',
+  //   name: 'Deepseek Coder',
+  //   provider: LLMProvider.Deepseek,
+  //   description: '',
+  //   requiresApiKey: true
+  // },
   {
     id: 'deepseek-reasoner',
     name: 'Deepseek Reasoner',
     provider: LLMProvider.Deepseek,
     description: '',
-    requiresApiKey: true
+    requiresApiKey: true,
+    reasoning: true,
+    supportToolCalling: false,
   },
 ];
 

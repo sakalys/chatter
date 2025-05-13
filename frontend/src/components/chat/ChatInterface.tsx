@@ -149,6 +149,8 @@ export function ChatInterface() {
           model: selectedModel.id,
           message: content,
           api_key_id: apiKey.id,
+          reasoning: selectedModel.reasoning,
+          tool_calling: selectedModel.supportToolCalling,
           tool_decision: toolDecision,
         }
 
