@@ -68,6 +68,27 @@ async def create_test_user(db: AsyncSession) -> User:
     
     return user
 
+async def create_deepseek_api_key(db: AsyncSession, user: User) -> None:
+    # Read the API key from the gitignored file
+    api_key_path = Path(__file__).parent / "deepseek_api_key.txt"
+    if not api_key_path.exists():
+        print(f"Error: API key file not found at {api_key_path}")
+        return
+    
+    api_key = api_key_path.read_text().strip()
+    if not api_key:
+        print("Error: API key file is empty")
+        return
+    
+    # Create the API key
+    api_key_in = ApiKeyCreate(
+        provider="deepseek",
+        key=api_key,
+    )
+    
+    await create_api_key(db, api_key_in, user.id)
+    print("Created Deepseek API key for test user")
+
 async def create_openai_api_key(db: AsyncSession, user: User) -> None:
     # Read the API key from the gitignored file
     api_key_path = Path(__file__).parent / "openai_api_key.txt"
@@ -218,7 +239,7 @@ async def main():
         user = await create_test_user(db)
         
         await create_gemini_api_key(db, user)
-
+        await create_deepseek_api_key(db, user)
         await create_openai_api_key(db, user)
         
         mcp_config = await create_mcp_config_fixture(db, user)

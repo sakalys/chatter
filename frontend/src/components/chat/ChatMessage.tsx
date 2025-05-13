@@ -82,7 +82,7 @@ export function ChatMessage({ role, content, model, toolCall, onDecision, disabl
               </p>
             </div>
             <div className={`mt-1 text-sm ${textColor}`}>
-              <div className="prose prose-sm">
+              <div className="prose prose-sm wrap-break-word">
                 {isUser ? (
                   <Nl2p text={content} />
                 ) : toolCall ? (

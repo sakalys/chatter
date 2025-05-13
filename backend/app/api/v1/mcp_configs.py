@@ -85,6 +85,15 @@ async def read_mcp_config(
     return mcp_config
 
 
+@router.get("/{mcp_config_id}/tools", response_model=list[McpTool])
+async def get_config_tools(
+    mcp_config_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: DB,
+):
+    return await read_available_mcp_tools(current_user, db, mcp_config_id)
+
+
 @router.put("/{mcp_config_id}", response_model=MCPConfigResponse)
 async def update_user_mcp_config(
     mcp_config_id: UUID,

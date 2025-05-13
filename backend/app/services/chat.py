@@ -1,57 +1,78 @@
-from datetime import timedelta
 import json
 import logging
-from re import S
 from typing import Any, AsyncGenerator, Literal, Union
 from uuid import UUID
-from app.models.mcp_tool_use import MCPToolUse, ToolUseState
-from litellm import CustomStreamWrapper, acompletion
 
-from fastapi import HTTPException, status
 import litellm
-from openai import APIStatusError, AuthenticationError, BadRequestError
-from sse_starlette.sse import EventSourceResponse
+from fastapi import HTTPException, status
+from litellm import CustomStreamWrapper, acompletion
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
+from openai import APIStatusError, AuthenticationError
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from sse_starlette.sse import EventSourceResponse
 
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.mcp_config import MCPConfig
 from app.models.mcp_tool import MCPTool
+from app.models.mcp_tool_use import MCPToolUse, ToolUseState
+from app.models.user import User  # Import User model
+from app.schemas.conversation import (
+    ConversationCreate,
+    ConversationUpdate,
+    MessageResponse,
+)
 from app.schemas.message import MessageCreate, ToolUseCreate
-from app.models.user import User # Import User model
 from app.services.api_key import decrypt_api_key
-from app.services.conversation import add_message_to_conversation, get_messages_by_conversation, get_conversation_by_id_and_user_id, update_conversation
-from app.schemas.conversation import ConversationCreate, ConversationUpdate, MessageResponse
+from app.services.conversation import (
+    add_message_to_conversation,
+    get_conversation_by_id_and_user_id,
+    get_messages_by_conversation,
+    update_conversation,
+)
 
-logger = logging.getLogger(__name__) # Get logger
+logger = logging.getLogger(__name__)
+
 
 class StreamEvent:
     """
     Class to represent a streaming event.
     """
+
     event: str
     data: str
 
-    def __init__(self, event: Union[Literal["text"], Literal["function_call"], Literal["api_error"], Literal["auth_error"]], data: str):
+    def __init__(
+        self,
+        event: Union[
+            Literal["text"],
+            Literal["function_call"],
+            Literal["api_error"],
+            Literal["auth_error"],
+        ],
+        data: str,
+    ):
         self.event = event
         self.data = data
 
     def __str__(self):
         return f"Event: {self.event}, Data: {self.data}"
 
+
 class FunctionCall(BaseModel):
     """
     Class to represent a function call event.
     """
+
     name: str
     arguments: dict[str, Any] | None
 
     def __str__(self):
         return f"FunctionCall(name={self.name}, arguments={self.arguments})"
+
 
 def _format_mcp_tools_for_openai(mcp_tools: list[MCPTool]) -> list[dict[str, Any]]:
     """
@@ -76,12 +97,15 @@ def _format_mcp_tools_for_openai(mcp_tools: list[MCPTool]) -> list[dict[str, Any
 
                 # see https://spec.openapis.org/oas/v3.0.3#schema
                 # see https://github.com/lastmile-ai/mcp-agent/issues/93
-                if property_schema.get("type") == "string" and property_schema.get("format") == "uri":
+                if (
+                    property_schema.get("type") == "string"
+                    and property_schema.get("format") == "uri"
+                ):
                     del cleaned_property_schema["format"]
 
             cleaned_properties[property_name] = cleaned_property_schema
-        
-        function_parameters['properties'] = cleaned_properties
+
+        function_parameters["properties"] = cleaned_properties
 
         openai_tool = {
             "type": "function",
@@ -94,6 +118,7 @@ def _format_mcp_tools_for_openai(mcp_tools: list[MCPTool]) -> list[dict[str, Any
         tools.append(openai_tool)
 
     return tools
+
 
 async def _generate_litellm_response(
     provider: str,
@@ -117,49 +142,67 @@ async def _generate_litellm_response(
     tools = _format_mcp_tools_for_openai(mcp_tools)
 
     formatted_messages: list[Any] = []
-    formatted_messages.append( {
-        "role": "system",
-        "content": "Remember... If a question is unrelated to functions provided to you, use your intrinsic knowledge to anwer the question.",
-    })
+    formatted_messages.append(
+        {
+            "role": "system",
+            "content": "Remember... If a question is unrelated to functions provided to you, use your intrinsic knowledge to anwer the question.",
+        }
+    )
     for msg in messages:
         if "content" in msg:
             if msg["role"] == "user":
                 formatted_messages.append({"role": "user", "content": msg["content"]})
             elif msg["role"] == "assistant":
-                formatted_messages.append({"role": "assistant", "content": msg["content"]})
+                formatted_messages.append(
+                    {"role": "assistant", "content": msg["content"]}
+                )
             elif msg["role"] == "system":
-                formatted_messages.append({"role": "user", "content": f"System: {msg['content']}"})
+                formatted_messages.append(
+                    {"role": "user", "content": f"System: {msg['content']}"}
+                )
             elif msg["role"] == "function_call":
-                formatted_messages.append({"role": "assistant", "content": f"""
+                formatted_messages.append(
+                    {
+                        "role": "assistant",
+                        "content": f"""
 <tool_call_parameters>
     {msg['content']}
 </tool_call_parameters>
-"""})
+""",
+                    }
+                )
             elif msg["role"] == "function_call_result":
-                formatted_messages.append({"role": "assistant", "content": f"""
+                formatted_messages.append(
+                    {
+                        "role": "assistant",
+                        "content": f"""
 <tool_call_response>
     {msg['content']}
 </tool_call_response>
-"""})
+""",
+                    }
+                )
 
     litellm.drop_params = True
 
     try:
         args = {
-            'stream' :True,
-            'model': provider+"/"+model,
-            'messages': formatted_messages,
-            'api_key':api_key,
-            'parallel_tool_calls':False,
+            "stream": True,
+            "model": provider + "/" + model,
+            "messages": formatted_messages,
+            "api_key": api_key,
+            "parallel_tool_calls": False,
         }
 
-        if len(tools): # required for deepseek to not provide the tools array, even if empty
-            args['tools'] = tools;
+        if len(
+            tools
+        ):  # required for deepseek to not provide the tools array, even if empty
+            args["tools"] = tools
 
         stream = await acompletion(**args)
 
         unfinished_call = None
-        
+
         if not isinstance(stream, CustomStreamWrapper):
             raise
 
@@ -180,7 +223,9 @@ async def _generate_litellm_response(
                             name=unfinished_call["name"],
                             arguments=json.loads(unfinished_call["arguments"]),
                         )
-                        yield StreamEvent("function_call", json.dumps(call.model_dump()))
+                        yield StreamEvent(
+                            "function_call", json.dumps(call.model_dump())
+                        )
 
                     unfinished_call = {
                         "name": "",
@@ -191,13 +236,15 @@ async def _generate_litellm_response(
 
                 if function_call is not None:
                     if unfinished_call is None:
-                        raise ValueError("Previous buffered call must be set before accessing function_call")
+                        raise ValueError(
+                            "Previous buffered call must be set before accessing function_call"
+                        )
 
                     if function_call.name:
                         unfinished_call["name"] = function_call.name
 
                     unfinished_call["arguments"] += function_call.arguments or ""
-            
+
             if delta.content is not None:
                 yield StreamEvent("text", delta.content)
 
@@ -213,28 +260,29 @@ async def _generate_litellm_response(
     except APIStatusError as exc:
         yield StreamEvent("api_error", exc.message)
 
+
 async def generate_chat_response(
-    user: User, # Added user parameter
-    messages: list[dict[str, str]], # Changed type hint to match _generate functions
+    user: User,  # Added user parameter
+    messages: list[dict[str, str]],  # Changed type hint to match _generate functions
     model: str,
     api_key: str,  # Changed to expect decrypted key string
     provider: str,  # Added provider parameter
-    tool_calling: bool
+    tool_calling: bool,
 ) -> AsyncGenerator[StreamEvent, None]:
     """
     Generate a chat response from an LLM provider.
-    
+
     Args:
         conversation: Conversation object
         messages: List of messages in the conversation
         model: Model to use for generation
         api_key: Decrypted API key string
         provider: Provider name (openai, anthropic, gemini, etc)
-        
+
     Returns:
         Response from the LLM provider or streaming response object
     """
-    
+
     all_mcp_tools: list[MCPTool] = []
 
     if tool_calling:
@@ -243,8 +291,11 @@ async def generate_chat_response(
         for config in configs:
             all_mcp_tools.extend(await config.awaitable_attrs.tools)
 
-    response = _generate_litellm_response(provider, messages, model, api_key, all_mcp_tools) # Pass mcp_tools to OpenAI function
+    response = _generate_litellm_response(
+        provider, messages, model, api_key, all_mcp_tools
+    )  # Pass mcp_tools to OpenAI function
     return response
+
 
 async def handle_chat_request(
     db,
@@ -258,7 +309,7 @@ async def handle_chat_request(
 ) -> Any:
     """
     Handle a chat request.
-    
+
     Args:
         db: Database session
         user_id: ID of the current user
@@ -266,28 +317,32 @@ async def handle_chat_request(
         user_message: User message
         model: Model to use for generation
         api_key: API key to use for the request
-        
+
         Returns:
             Response from the LLM provider or SSE response, including the conversation ID
     """
-    logger.debug(f"Handling chat request for user: {user.id}, conversation: {conversation_id}")
-    
+    logger.debug(
+        f"Handling chat request for user: {user.id}, conversation: {conversation_id}"
+    )
+
     is_new_conversation = conversation_id is None
 
     # If no conversation_id is provided, create a new conversation
     if is_new_conversation:
         from app.services.conversation import create_conversation
+
         conversation = await create_conversation(db, ConversationCreate(), user.id)
         conversation_id = conversation.id
         logger.debug(f"Created new conversation with ID: {conversation_id}")
     else:
         # Get conversation to ensure it exists and belongs to the user
-        conversation = await get_conversation_by_id_and_user_id(db, conversation_id, user.id)
+        conversation = await get_conversation_by_id_and_user_id(
+            db, conversation_id, user.id
+        )
         if not conversation:
             logger.error(f"Conversation not found for ID: {conversation_id}")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Conversation not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
             )
 
     created_user_message_id: str | None = None
@@ -301,26 +356,28 @@ async def handle_chat_request(
                 model=model,
                 provider=api_key.provider,
             ),
-            conversation
+            conversation,
         )
 
         created_user_message_id = str(msg.id)
         logger.debug(f"Added user message to conversation: {conversation.id}")
-    
+
     # Get all messages in the conversation
     messages = await get_messages_by_conversation(db, conversation.id)
-    logger.debug(f"Retrieved {len(messages)} messages for conversation: {conversation.id}")
-
+    logger.debug(
+        f"Retrieved {len(messages)} messages for conversation: {conversation.id}"
+    )
 
     # Format messages for the provider
     formatted_messages = []
     for msg in messages:
-        formatted_messages.append({
-            "role": msg.role,
-            "content": msg.content
-        })
+        formatted_messages.append({"role": msg.role, "content": msg.content})
 
-    if tool_decision is not None and len(messages) and messages[-1].role == "function_call":
+    if (
+        tool_decision is not None
+        and len(messages)
+        and messages[-1].role == "function_call"
+    ):
         logger.debug("Handling tool decision")
 
         tool_use = messages[-1].mcp_tool_use
@@ -336,56 +393,48 @@ async def handle_chat_request(
             conversation,
         )
 
-        formatted_messages.append({
-            "role": "function_call_result",
-            "content": response_text,
-        })
+        formatted_messages.append(
+            {
+                "role": "function_call_result",
+                "content": response_text,
+            }
+        )
 
     try:
         # Decrypt the API key before passing it to generate_chat_response
         decrypted_key = decrypt_api_key(api_key.key_reference)
-        
+
         # Generate response - pass the formatted messages list
         response = await generate_chat_response(
-            user=conversation.user, # Pass the user object
+            user=conversation.user,  # Pass the user object
             messages=formatted_messages,
             model=model,
             api_key=decrypted_key,  # Pass the decrypted key directly
             provider=api_key.provider,  # Pass the provider separately
             tool_calling=tool_calling,
         )
-            
+
         async def event_generator():
             if created_user_message_id:
-                yield {
-                    "event": "user_message_id",
-                    "data": created_user_message_id
-                }
+                yield {"event": "user_message_id", "data": created_user_message_id}
 
             # If it's a new conversation, send an initial event with the conversation ID
 
             if is_new_conversation:
-                logger.debug(f"Sending initial conversation_id event: {conversation.id}")
-                yield {
-                    "event": "conversation_created",
-                    "data": str(conversation.id)
-                }
+                logger.debug(
+                    f"Sending initial conversation_id event: {conversation.id}"
+                )
+                yield {"event": "conversation_created", "data": str(conversation.id)}
 
             tool_calls = []
 
             content = ""
             async for event in response:
                 if event.event == "auth_error":
-                    yield {
-                        "event": "auth_error",
-                        "data": ""
-                    }
+                    yield {"event": "auth_error", "data": ""}
 
                 elif event.event == "api_error":
-                    yield {
-                        "event": "api_error",
-                        "data": event.data
-                    }
+                    yield {"event": "api_error", "data": event.data}
 
                 elif event.event == "function_call":
                     # Handle function call event
@@ -397,10 +446,7 @@ async def handle_chat_request(
                     # Handle text event
                     content += event.data
 
-                    yield {
-                        "event": "message",
-                        "data": event.data
-                    }
+                    yield {"event": "message", "data": event.data}
                 else:
                     logger.warning(f"Unknown event type: {event.event}")
 
@@ -413,12 +459,14 @@ async def handle_chat_request(
                         model=model,
                         provider=api_key.provider,
                     ),
-                    conversation
+                    conversation,
                 )
 
                 yield {
                     "event": "message_done",
-                    "data": MessageResponse.model_validate(created, from_attributes=True).model_dump_json(by_alias=True)
+                    "data": MessageResponse.model_validate(
+                        created, from_attributes=True
+                    ).model_dump_json(by_alias=True),
                 }
 
             for tool_call in tool_calls:
@@ -442,13 +490,18 @@ async def handle_chat_request(
                     db,
                     MessageCreate(
                         role="function_call",
-                        content=json.dumps({"name": tool_call["name"], "arguments": tool_call["arguments"]}),
+                        content=json.dumps(
+                            {
+                                "name": tool_call["name"],
+                                "arguments": tool_call["arguments"],
+                            }
+                        ),
                         model=model,
                         provider=api_key.provider,
                         tool_use=ToolUseCreate(
                             name=tool_call["name"],
                             args=tool_call["arguments"],
-                        )
+                        ),
                     ),
                     conversation,
                     mcp_tool,
@@ -456,9 +509,10 @@ async def handle_chat_request(
 
                 yield {
                     "event": "function_call",
-                    "data": MessageResponse.model_validate(message, from_attributes=True).model_dump_json(by_alias=True)
+                    "data": MessageResponse.model_validate(
+                        message, from_attributes=True
+                    ).model_dump_json(by_alias=True),
                 }
-
 
             # Generate and set conversation title after the first response
             if is_new_conversation and content:
@@ -470,32 +524,38 @@ async def handle_chat_request(
                     assistant_message=content,
                     api_key=decrypted_key,
                     provider=api_key.provider,
-                    model=model
+                    model=model,
                 )
                 if generated_title:
-                    logger.debug(f"Sending conversation_title_updated event: {generated_title}")
+                    logger.debug(
+                        f"Sending conversation_title_updated event: {generated_title}"
+                    )
                     yield {
                         "event": "conversation_title_updated",
-                        "data": generated_title
+                        "data": generated_title,
                     }
 
-            yield {
-                "event": "done",
-                "data": ""
-            }
+            yield {"event": "done", "data": ""}
 
         return EventSourceResponse(event_generator())
 
     except Exception as e:
         # Log the error with traceback and return an HTTPException
-        import traceback
         logger.error(f"Error generating chat response: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error generating chat response: {e}"
+            detail=f"Error generating chat response: {e}",
         )
 
-async def handle_tool_call(db: AsyncSession, tool_use: MCPToolUse, tool_decision: bool, model: str, api_key: ApiKey, conversation: Conversation) -> str:
+
+async def handle_tool_call(
+    db: AsyncSession,
+    tool_use: MCPToolUse,
+    tool_decision: bool,
+    model: str,
+    api_key: ApiKey,
+    conversation: Conversation,
+) -> str:
     mcp_tool: MCPTool = await tool_use.awaitable_attrs.tool
 
     mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
@@ -509,24 +569,23 @@ async def handle_tool_call(db: AsyncSession, tool_use: MCPToolUse, tool_decision
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
-            result = await session.call_tool(
-                tool_use.name,
-                arguments=tool_use.args
-            )
+            result = await session.call_tool(tool_use.name, arguments=tool_use.args)
 
             response_text = ""
             if result and result.content:
                 for content_item in result.content:
                     # Explicitly check if the content_item is a text content type
                     # Assuming TextContent is a valid type in the mcp library
-                    if isinstance(content_item, TextContent) and content_item.text is not None:
-                         response_text += content_item.text
+                    if (
+                        isinstance(content_item, TextContent)
+                        and content_item.text is not None
+                    ):
+                        response_text += content_item.text
                     # You might want to handle other content types here if necessary
                     # elif isinstance(content_item, ImageContent) and content_item.image_url is not None:
                     #     response_text += f"[Image: {content_item.image_url}]"
                     # elif isinstance(content_item, ResourceContent) and content_item.resource_url is not None:
                     #     response_text += f"[Resource: {content_item.resource_url}]"
-
 
             await add_message_to_conversation(
                 db,
@@ -536,10 +595,11 @@ async def handle_tool_call(db: AsyncSession, tool_use: MCPToolUse, tool_decision
                     model=model,
                     provider=api_key.provider,
                 ),
-                conversation
+                conversation,
             )
 
             return response_text
+
 
 async def generate_and_set_conversation_title(
     db,
@@ -560,16 +620,15 @@ async def generate_and_set_conversation_title(
     # Construct prompt for title generation
     prompt = f"Generate a short, concise title (under 10 words) for the following conversation based on the user's initial message and the assistant's response (use plain text for the output. Do not use JSON or anything similar!):\n\nUser: {user_message}\nAssistant: {assistant_message}\n\nTitle:"
 
-    title = ''
+    title = ""
     try:
         generator = await generate_chat_response(
             user,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
+            messages=[{"role": "user", "content": prompt}],
             model=model,
             api_key=api_key,
             provider=provider,
+            tool_calling=False,
         )
 
         async for title_part in generator:
@@ -579,7 +638,9 @@ async def generate_and_set_conversation_title(
             await update_conversation(db, conversation, ConversationUpdate(title=title))
 
     except Exception as e:
-        logger.error(f"Error generating or setting conversation title: {e}", exc_info=True)
+        logger.error(
+            f"Error generating or setting conversation title: {e}", exc_info=True
+        )
         # Don't raise an exception here, title generation is not critical
 
     return title
