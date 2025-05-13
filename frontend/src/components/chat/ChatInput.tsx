@@ -1,7 +1,10 @@
 import { useState, FormEvent, KeyboardEvent, useEffect } from 'react';
 import { AVAILABLE_MODELS, Model } from '../../types';
+import { AlertBox } from '../ui/Alert';
+import { Variant } from '../ui/types';
 
 interface ChatInputProps {
+  reasoning: boolean
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   selectedModel: Model;
@@ -15,6 +18,7 @@ const defaultMsg = '';
 // const defaultMsg = "what's the weather like in Klaipeda?";
 
 export function ChatInput({
+  reasoning,
   onSendMessage,
   isLoading = false,
   selectedModel,
@@ -35,7 +39,7 @@ export function ChatInput({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (message.trim() && !isLoading) {
+    if (!reasoning && message.trim() && !isLoading) {
       onSendMessage(message);
       setMessage(defaultMsg);
     }
@@ -55,6 +59,7 @@ export function ChatInput({
       <div className="max-w-4xl mx-auto">
         <form onSubmit={handleSubmit} className="relative">
           <textarea
+            disabled={reasoning}
             className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-16 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             rows={3}
             placeholder="Type your message..."
@@ -79,6 +84,11 @@ export function ChatInput({
             )}
           </button>
         </form>
+                    {reasoning && (
+                    <AlertBox variant={Variant.Warning}>
+<p className="text-right text-red-600 text-sm">Reasoning model support is coming soon. if you need them now, don't hesitate to reach out.</p>
+</AlertBox>
+)}
         <div className="mt-2 text-xs text-gray-500 flex justify-between items-center">
           <div>Press Shift + Enter for a new line</div>
           <div className="flex items-center">

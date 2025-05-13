@@ -6,6 +6,6 @@
 
 /* Custom styles can be added below */
 
-input[disabled], button[disabled] {
+input[disabled], button[disabled], textarea[disabled] {
     opacity: 0.60;
 }
