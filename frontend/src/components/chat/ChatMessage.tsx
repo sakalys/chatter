@@ -6,7 +6,14 @@ import { Nl2p } from './ChatInterface';
 import { MCPToolUse, Model } from '../../types';
 import { ToolCallMessage } from './ToolCallMessage';
 
-export type MessageRole = 'user' | 'assistant' | 'system' | 'function_call' | 'auth_error';
+export enum MessageRole {
+    User= 'user',
+    Assistant = 'asssitant',
+    FunctionCall = 'function_call',
+    AuthError = 'auth_error',
+    ApiError = 'api_error',
+    System = 'system',
+}
 
 interface ChatMessageProps {
   id: string
@@ -19,7 +26,8 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ role, content, model, toolCall, onDecision, disabledToolCall }: ChatMessageProps) {
-  const isUser = role === 'user';
+  const isUser = role === MessageRole.User;
+  const isError = role === MessageRole.ApiError || role === MessageRole.AuthError;
   const isToolCall = !!toolCall;
 
   let bgColor = 'bg-gray-50';
@@ -40,6 +48,14 @@ export function ChatMessage({ role, content, model, toolCall, onDecision, disabl
       </svg>
     );
     senderName = 'You';
+    } else if (isError) {
+    bgColor = 'bg-red-300';
+    avatar = (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25a.75.75 0 00-1.5 0V6.75a3.75 3.75 0 10-7.5 0v3a.75.75 0 00-1.5 0V6.75a5.25 5.25 0 1110.5 0v3z" clipRule="evenodd" />
+      </svg>
+    );
+    senderName = 'Error';
   } else if (isToolCall) {
     bgColor = 'bg-yellow-100';
     avatar = (

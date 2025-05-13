@@ -1,5 +1,4 @@
-export type MessageRole = 'user' | 'assistant' | 'system';
-
+import { MessageRole } from "../components/chat/ChatMessage";
 
 export interface MCPToolUse {
     id: string;
@@ -75,6 +74,7 @@ export enum LLMProvider {
   OpenAI = 'openai',
   Anthropic = 'anthropic',
   XAi = 'xai',
+  Deepseek = 'deepseek',
 }
 
 export const AVAILABLE_MODELS: Model[] = [
@@ -138,6 +138,27 @@ export const AVAILABLE_MODELS: Model[] = [
     id: 'grok-3-latest',
     name: 'Grok 3',
     provider: LLMProvider.XAi,
+    description: '',
+    requiresApiKey: true
+  },
+  {
+    id: 'deepseek-chat',
+    name: 'Deepseek Chat',
+    provider: LLMProvider.Deepseek,
+    description: '',
+    requiresApiKey: true
+  },
+  {
+    id: 'deepseek-code',
+    name: 'Deepseek Coder',
+    provider: LLMProvider.Deepseek,
+    description: '',
+    requiresApiKey: true
+  },
+  {
+    id: 'deepseek-reasoner',
+    name: 'Deepseek Reasoner',
+    provider: LLMProvider.Deepseek,
     description: '',
     requiresApiKey: true
   },

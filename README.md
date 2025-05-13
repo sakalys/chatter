@@ -143,6 +143,16 @@ chat-platform/
 └── README.md               # Project documentation
 ```
 
+## Thoughts
+
+MCP Servers:
+- Types by state management: __stateful__ or __stateless__
+  - If they are stateful, then they need to store their memory somewhere. E.g. 
+  github MCP server allows the users access to github on behalf of the user, but the
+  data that it has access to can change over time (i.e. gets stored on github
+  servers)
+  - If they are stateful they might also store their state in memory.
+
 ## License
 
 

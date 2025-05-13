@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChatMessage, IncomingMessage, OutgoingMessage } from './ChatMessage';
+import { ChatMessage, IncomingMessage, MessageRole, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { Message, ApiKey, MessageCreate, Model, AVAILABLE_MODELS, findModelById } from '../../types';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -220,7 +220,7 @@ export function ChatInterface() {
             } else if (eventType === 'user_message_id' && typeof eventData === 'string') {
               const messageId = eventData;
               setOutgoingMessage(null)
-              setMessages([...messages, {role: 'user', model: thisModel.id, id: messageId, content: userMessage.content, mcp_tool_use: null }]);
+              setMessages([...messages, {role: MessageRole.User, model: thisModel.id, id: messageId, content: userMessage.content, mcp_tool_use: null }]);
 
             } else if (eventType === 'done') {
               // The stream is finished, no more data for this message
@@ -242,8 +242,18 @@ export function ChatInterface() {
             } else if (eventType === 'auth_error') {
               const errorMessage: Message = {
                 id: `system-${Date.now()}-${messages.length + 1}`, // More unique key for errors
-                role: 'system',
+                role: MessageRole.System,
                 content: `Error: API key error, possibly invalid`,
+                model: selectedModel.id,
+                mcp_tool_use: null,
+              };
+
+              setMessages([...messages, errorMessage]);
+            } else if (eventType === 'api_error' && typeof eventData === 'string') {
+              const errorMessage: Message = {
+                id: `system-${Date.now()}-${messages.length + 1}`, // More unique key for errors
+                role: MessageRole.ApiError,
+                content: `Error: ${eventData}`,
                 model: selectedModel.id,
                 mcp_tool_use: null,
               };
@@ -270,7 +280,7 @@ export function ChatInterface() {
       setNewChatState("idle"); // Set state to "idle" on error in a new chat
       const errorMessage: Message = {
         id: `system-${Date.now()}-${messages.length + 1}`, // More unique key for errors
-        role: 'system',
+        role: MessageRole.System,
         content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         model: selectedModel.id,
         mcp_tool_use: null,

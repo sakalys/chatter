@@ -9,7 +9,7 @@ from litellm import CustomStreamWrapper, acompletion
 
 from fastapi import HTTPException, status
 import litellm
-from openai import AuthenticationError
+from openai import APIStatusError, AuthenticationError, BadRequestError
 from sse_starlette.sse import EventSourceResponse
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -36,7 +36,7 @@ class StreamEvent:
     event: str
     data: str
 
-    def __init__(self, event: Union[Literal["text"], Literal["function_call"], Literal["auth_error"]], data: str):
+    def __init__(self, event: Union[Literal["text"], Literal["function_call"], Literal["api_error"], Literal["auth_error"]], data: str):
         self.event = event
         self.data = data
 
@@ -206,6 +206,8 @@ async def _generate_litellm_response(
             unfinished_call = None
     except AuthenticationError:
         yield StreamEvent("auth_error", "")
+    except APIStatusError as exc:
+        yield StreamEvent("api_error", exc.message)
 
 async def generate_chat_response(
     user: User, # Added user parameter
@@ -370,6 +372,12 @@ async def handle_chat_request(
                     yield {
                         "event": "auth_error",
                         "data": ""
+                    }
+
+                elif event.event == "api_error":
+                    yield {
+                        "event": "api_error",
+                        "data": event.data
                     }
 
                 elif event.event == "function_call":
