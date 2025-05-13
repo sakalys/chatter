@@ -207,7 +207,7 @@ async def _generate_litellm_response(
         }
 
         if (
-            len(tools) > 1
+            len(tools) > 0
         ):  # required for deepseek to not provide the tools array, even if empty
             args["tools"] = tools
             args["parallel_tool_calls"] = False
@@ -307,17 +307,25 @@ async def generate_chat_response(
                 map(
                     lambda tool: MCPToolShape(
                         name="user__" + str(config.id) + "__" + tool.name,
-                        description=tool.description,
+                        description=tool.description
+                        or "Gets content from an internet address",
                         inputSchema=tool.inputSchema,
                     ),
                     user_tools,
                 )
             )
 
-        configs: list[PreconfiguredMCPConfig] = await user.awaitable_attrs.preconfigured_mcp_configs
+        configs: list[PreconfiguredMCPConfig] = (
+            await user.awaitable_attrs.preconfigured_mcp_configs
+        )
 
         for preconfigured in configs:
-            tools: list[PreconfiguredMCPTool] = await preconfigured.awaitable_attrs.tools
+            if not preconfigured.enabled:
+                continue
+
+            tools: list[PreconfiguredMCPTool] = (
+                await preconfigured.awaitable_attrs.tools
+            )
             all_mcp_tools.extend(
                 map(
                     lambda tool: MCPToolShape(
@@ -516,42 +524,51 @@ async def handle_chat_request(
                 # fetch the user's MCP tool from db
                 # the mcp config must belong to the user
                 # and the tool must belong to the mcp config
-                mcp_tool: MCPToolShape | None = None
+                mcp_tool: MCPToolShape | MCPTool | None = None
 
-                call_name: str = tool_call['name']
+                call_name: str = tool_call["name"]
 
-                if call_name.startswith('user__'):
-                    user_configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
-                    check_name = call_name.removeprefix('user__')
+                if call_name.startswith("user__"):
+                    user_configs: list[MCPConfig] = (
+                        await user.awaitable_attrs.mcp_configs
+                    )
+                    check_name = call_name.removeprefix("user__")
+                    [id, tool_name] = check_name.split("__")
 
                     for config in user_configs:
+                        if str(config.id) != id:
+                            continue
+
                         user_tools: list[MCPTool] = await config.awaitable_attrs.tools
                         for tool in user_tools:
-                            if tool.name == check_name:
-                                mcp_tool = MCPToolShape(
-                                    name=tool.name,
-                                    description=tool.description,
-                                    inputSchema=tool.inputSchema
-                                )
+                            if tool.name == tool_name:
+                                mcp_tool = tool
+
                                 break
                         if mcp_tool:
                             break
 
                 if call_name.startswith("preconfigured__"):
-                    configs: list[PreconfiguredMCPConfig] = await user.awaitable_attrs.preconfigured_mcp_configs
-                    [code, tool_name] = call_name.removeprefix("preconfigured__").split("__")
+                    configs: list[PreconfiguredMCPConfig] = (
+                        await user.awaitable_attrs.preconfigured_mcp_configs
+                    )
+                    [code, tool_name] = call_name.removeprefix("preconfigured__").split(
+                        "__"
+                    )
 
                     for config in configs:
                         if config.code != code:
                             continue
 
-                        tools: list[PreconfiguredMCPTool] = await config.awaitable_attrs.tools
+                        tools: list[PreconfiguredMCPTool] = (
+                            await config.awaitable_attrs.tools
+                        )
                         for tool in tools:
                             if tool.name == tool_name:
                                 mcp_tool = MCPToolShape(
                                     name=tool.name,
                                     description=tool.description,
-                                    inputSchema=tool.inputSchema
+                                    inputSchema=tool.inputSchema,
                                 )
                                 break
                         if mcp_tool:
@@ -637,13 +654,13 @@ async def handle_tool_call(
         mcp_tool: MCPTool | None = await tool_use.awaitable_attrs.tool
 
         if not mcp_tool:
-            raise
+            raise Exception("mcp tool not found")
 
         mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
         url = mcp_config.url
         tool_name = mcp_tool.name
     else:
-        config_part = tool_use.name.removeprefix('preconfigured__')
+        config_part = tool_use.name.removeprefix("preconfigured__")
         [code, tool_name] = config_part.split("__")
 
         url = get_preconfigured_url(code)
