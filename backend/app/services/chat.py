@@ -204,13 +204,13 @@ async def _generate_litellm_response(
             "model": provider + "/" + model,
             "messages": formatted_messages,
             "api_key": api_key,
-            "parallel_tool_calls": False,
         }
 
         if (
             len(tools) > 1
         ):  # required for deepseek to not provide the tools array, even if empty
             args["tools"] = tools
+            args["parallel_tool_calls"] = False
 
         stream = await acompletion(**args)
 
