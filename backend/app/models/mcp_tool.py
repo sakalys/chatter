@@ -1,5 +1,6 @@
 import uuid
 
+from pydantic import BaseModel
 from sqlalchemy import ForeignKey, types
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
@@ -9,6 +10,11 @@ from typing import Any, Optional
 import typing
 if typing.TYPE_CHECKING:
     from app.models.mcp_config import MCPConfig
+
+class MCPToolShape(BaseModel):
+    name: str
+    description: str | None
+    inputSchema: dict[str, Any]
 
 
 class MCPTool(Base):

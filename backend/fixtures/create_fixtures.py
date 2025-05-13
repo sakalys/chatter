@@ -191,7 +191,6 @@ async def create_mcp_config_fixture(db: AsyncSession, user: User) -> MCPConfig:
     mcp_config_in = MCPConfigCreate(
         name=mcp_name,
         url=mcp_url,
-        configuration=None, # Assuming no additional configuration needed for this fixture
     )
 
     mcp_config_result = await create_mcp_config(db, mcp_config_in, user, fetch_tools=False)
@@ -242,11 +241,11 @@ async def main():
         await create_deepseek_api_key(db, user)
         await create_openai_api_key(db, user)
         
-        mcp_config = await create_mcp_config_fixture(db, user)
+        # mcp_config = await create_mcp_config_fixture(db, user)
 
-        tools = await create_mcp_tool_fixtures(db, mcp_config)
+        # tools = await create_mcp_tool_fixtures(db, mcp_config)
 
-        await create_example_conversation(db, user, tools[0])
+        # await create_example_conversation(db, user, tools[0])
 
     print("Fixtures creation completed!")
 

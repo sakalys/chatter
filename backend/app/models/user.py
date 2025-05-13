@@ -1,15 +1,16 @@
 import uuid
 
-from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from app.db.base import Base
 
 import typing
+
 if typing.TYPE_CHECKING:
     from app.models.api_key import ApiKey
     from app.models.conversation import Conversation
     from app.models.mcp_config import MCPConfig
+    from app.models.preconfigured_mcp_config import PreconfiguredMCPConfig
 
 
 class User(Base):
@@ -27,3 +28,4 @@ class User(Base):
     api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     mcp_configs: Mapped[list["MCPConfig"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    preconfigured_mcp_configs: Mapped[list["PreconfiguredMCPConfig"]] = relationship(back_populates="user", cascade="all, delete-orphan")

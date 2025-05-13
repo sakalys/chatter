@@ -72,6 +72,7 @@ async def google_login(
     except Exception as e:
         # Handle other potential errors during verification or user creation
         print(f"Error during Google login: {e}")
+        print(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during Google login",

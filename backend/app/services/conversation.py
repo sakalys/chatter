@@ -2,13 +2,13 @@ from json import tool
 from typing import Optional, Sequence
 from uuid import UUID
 
-from app.models.mcp_tool import MCPTool
-from app.models.mcp_tool_use import MCPToolUse, ToolUseState
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.conversation import Conversation
+from app.models.mcp_tool import MCPTool, MCPToolShape
+from app.models.mcp_tool_use import MCPToolUse, ToolUseState
 from app.models.message import Message
 from app.schemas.conversation import ConversationCreate, ConversationUpdate
 from app.schemas.message import MessageCreate
@@ -181,7 +181,7 @@ async def add_message_to_conversation(
     db: AsyncSession,
     message_in: MessageCreate,
     conversation: Conversation,
-    mcp_tool: Optional[MCPTool] = None,
+    mcp_tool: Optional[MCPToolShape | MCPTool] = None,
 ) -> Message:
     """
     Add a message to a conversation.
@@ -208,7 +208,7 @@ async def add_message_to_conversation(
             name=message_in.tool_use.name,
             args=message_in.tool_use.args,
             state=ToolUseState.pending,
-            tool=mcp_tool,
+            tool= mcp_tool if (mcp_tool and isinstance(mcp_tool, MCPTool)) else None,
         )
         message.mcp_tool_use = tool_use
         db.add(tool_use)

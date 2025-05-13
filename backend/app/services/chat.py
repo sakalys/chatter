@@ -12,13 +12,19 @@ from mcp.types import TextContent
 from openai import APIStatusError, AuthenticationError
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import descriptor_props
+from sqlalchemy.sql.operators import is_precedent
 from sse_starlette.sse import EventSourceResponse
 
+from app.models import preconfigured_mcp_config
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
 from app.models.mcp_config import MCPConfig
-from app.models.mcp_tool import MCPTool
+from app.models.mcp_tool import MCPTool, MCPToolShape
 from app.models.mcp_tool_use import MCPToolUse, ToolUseState
+from app.models.message import Message
+from app.models.preconfigured_mcp_config import PreconfiguredMCPConfig
+from app.models.preconfigured_mcp_tool import PreconfiguredMCPTool
 from app.models.user import User  # Import User model
 from app.schemas.conversation import (
     ConversationCreate,
@@ -32,6 +38,13 @@ from app.services.conversation import (
     get_conversation_by_id_and_user_id,
     get_messages_by_conversation,
     update_conversation,
+)
+from app.services.preconfigured_mcp_config import (
+    create_preconfigured_config,
+    get_preconfigured_config_by_code_and_user_id,
+    get_preconfigured_configs_by_user,
+    get_preconfigured_url,
+    update_tools,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,7 +87,7 @@ class FunctionCall(BaseModel):
         return f"FunctionCall(name={self.name}, arguments={self.arguments})"
 
 
-def _format_mcp_tools_for_openai(mcp_tools: list[MCPTool]) -> list[dict[str, Any]]:
+def _format_mcp_tools_for_openai(mcp_tools: list[MCPToolShape]) -> list[dict[str, Any]]:
     """
     Converts a list of MCPTool objects to the OpenAI tools format.
     Also cleans up the parameters by replacing "format": "uri" with "format": "string" for string types.
@@ -125,7 +138,7 @@ async def _generate_litellm_response(
     messages: list[dict[str, str]],
     model: str,
     api_key: str,
-    mcp_tools: list[MCPTool],
+    mcp_tools: list[MCPToolShape],
 ) -> AsyncGenerator[StreamEvent, None]:
     """
     Generate a chat response
@@ -141,7 +154,7 @@ async def _generate_litellm_response(
     # Convert MCP tools to OpenAI tools format
     tools = _format_mcp_tools_for_openai(mcp_tools)
 
-    formatted_messages: list[Any] = []
+    formatted_messages: list[dict] = []
     formatted_messages.append(
         {
             "role": "system",
@@ -194,8 +207,8 @@ async def _generate_litellm_response(
             "parallel_tool_calls": False,
         }
 
-        if len(
-            tools
+        if (
+            len(tools) > 1
         ):  # required for deepseek to not provide the tools array, even if empty
             args["tools"] = tools
 
@@ -283,17 +296,47 @@ async def generate_chat_response(
         Response from the LLM provider or streaming response object
     """
 
-    all_mcp_tools: list[MCPTool] = []
+    all_mcp_tools: list[MCPToolShape] = []
 
     if tool_calling:
-        configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
+        user_configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
 
-        for config in configs:
-            all_mcp_tools.extend(await config.awaitable_attrs.tools)
+        for config in user_configs:
+            user_tools: list[MCPTool] = await config.awaitable_attrs.tools
+            all_mcp_tools.extend(
+                map(
+                    lambda tool: MCPToolShape(
+                        name="user__" + str(config.id) + "__" + tool.name,
+                        description=tool.description,
+                        inputSchema=tool.inputSchema,
+                    ),
+                    user_tools,
+                )
+            )
+
+        configs: list[PreconfiguredMCPConfig] = await user.awaitable_attrs.preconfigured_mcp_configs
+
+        for preconfigured in configs:
+            tools: list[PreconfiguredMCPTool] = await preconfigured.awaitable_attrs.tools
+            all_mcp_tools.extend(
+                map(
+                    lambda tool: MCPToolShape(
+                        name="preconfigured__" + preconfigured.code + "__" + tool.name,
+                        description=tool.description,
+                        inputSchema=tool.inputSchema,
+                    ),
+                    tools,
+                )
+            )
 
     response = _generate_litellm_response(
-        provider, messages, model, api_key, all_mcp_tools
-    )  # Pass mcp_tools to OpenAI function
+        provider,
+        messages,
+        model,
+        api_key,
+        all_mcp_tools,
+    )
+
     return response
 
 
@@ -473,14 +516,46 @@ async def handle_chat_request(
                 # fetch the user's MCP tool from db
                 # the mcp config must belong to the user
                 # and the tool must belong to the mcp config
-                mcp_tool: MCPTool | None = None
-                for config in await user.awaitable_attrs.mcp_configs:
-                    for tool in await config.awaitable_attrs.tools:
-                        if tool.name == tool_call["name"]:
-                            mcp_tool = tool
+                mcp_tool: MCPToolShape | None = None
+
+                call_name: str = tool_call['name']
+
+                if call_name.startswith('user__'):
+                    user_configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
+                    check_name = call_name.removeprefix('user__')
+
+                    for config in user_configs:
+                        user_tools: list[MCPTool] = await config.awaitable_attrs.tools
+                        for tool in user_tools:
+                            if tool.name == check_name:
+                                mcp_tool = MCPToolShape(
+                                    name=tool.name,
+                                    description=tool.description,
+                                    inputSchema=tool.inputSchema
+                                )
+                                break
+                        if mcp_tool:
                             break
-                    if mcp_tool:
-                        break
+
+                if call_name.startswith("preconfigured__"):
+                    configs: list[PreconfiguredMCPConfig] = await user.awaitable_attrs.preconfigured_mcp_configs
+                    [code, tool_name] = call_name.removeprefix("preconfigured__").split("__")
+
+                    for config in configs:
+                        if config.code != code:
+                            continue
+
+                        tools: list[PreconfiguredMCPTool] = await config.awaitable_attrs.tools
+                        for tool in tools:
+                            if tool.name == tool_name:
+                                mcp_tool = MCPToolShape(
+                                    name=tool.name,
+                                    description=tool.description,
+                                    inputSchema=tool.inputSchema
+                                )
+                                break
+                        if mcp_tool:
+                            break
 
                 if not mcp_tool:
                     logger.error(f"MCP Tool not found for function call: {tool_call}")
@@ -556,20 +631,33 @@ async def handle_tool_call(
     api_key: ApiKey,
     conversation: Conversation,
 ) -> str:
-    mcp_tool: MCPTool = await tool_use.awaitable_attrs.tool
+    is_preconfigured = tool_use.name.startswith("preconfigured__")
 
-    mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
+    if not is_preconfigured:
+        mcp_tool: MCPTool | None = await tool_use.awaitable_attrs.tool
+
+        if not mcp_tool:
+            raise
+
+        mcp_config: MCPConfig = await mcp_tool.awaitable_attrs.mcp_config
+        url = mcp_config.url
+        tool_name = mcp_tool.name
+    else:
+        config_part = tool_use.name.removeprefix('preconfigured__')
+        [code, tool_name] = config_part.split("__")
+
+        url = get_preconfigured_url(code)
 
     tool_use.state = ToolUseState.approved if tool_decision else ToolUseState.rejected
     db.add(tool_use)
     await db.commit()
 
     # call the tool
-    async with streamablehttp_client(mcp_config.url) as (read_stream, write_stream, _):
+    async with streamablehttp_client(url) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
-            result = await session.call_tool(tool_use.name, arguments=tool_use.args)
+            result = await session.call_tool(tool_name, arguments=tool_use.args)
 
             response_text = ""
             if result and result.content:

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.mcp_config import MCPConfig
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
-from app.schemas.mcp_tool import McpTool # Import McpTool schema
+from app.schemas.mcp_tool import McpTool
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -80,7 +80,6 @@ async def create_mcp_config(
         user=user,
         name=mcp_config_in.name,
         url=mcp_config_in.url,
-        configuration=mcp_config_in.configuration,
     )
 
     if fetch_tools:

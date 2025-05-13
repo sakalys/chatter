@@ -18,7 +18,6 @@ class MCPConfig(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(nullable=False)  # User-friendly name for the MCP configuration
     url: Mapped[str] = mapped_column(nullable=False)  # MCP URL
-    configuration: Mapped[dict] = mapped_column(types.JSON, nullable=True)  # Additional configuration for the MCP
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="mcp_configs")
