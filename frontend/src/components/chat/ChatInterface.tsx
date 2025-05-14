@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChatMessage, IncomingMessage, MessageRole, OutgoingMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
@@ -397,13 +397,19 @@ export function ChatInterface() {
     );
 }
 
-export function Nl2p({ text }: { text: string }) {
+export function Nl2br({ text }: { text: string}) {
+    const txt = text.split('\n');
     return (
-        <div className="prose prose-sm">
-            {/* make paragraphs out of text */}
-            {text.split('\n').map((line, index) => (
-                <p key={index} className="mb-2">{line}</p>
-            ))}
-        </div>
+        txt.map((line, index) => (
+            <Fragment key={index}>{index < txt.length - 1 && <br/>}{line}</Fragment>
+        ))
+    );
+}
+
+export function Nl2p({ text, className }: { text: string, className?: string }) {
+    return (
+        text.split('\n').map((line, index) => (
+            <p key={index} className={className}>{line}</p>
+        ))
     );
 }
