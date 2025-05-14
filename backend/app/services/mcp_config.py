@@ -65,6 +65,7 @@ async def create_mcp_config(
     mcp_config_in: MCPConfigCreate,
     user: User,
     fetch_tools: bool = True,
+    code: str | None = None,
 ) -> Result[MCPConfig, str]:
     """
     Create a new MCP configuration.
@@ -80,7 +81,10 @@ async def create_mcp_config(
     """
 
     # TODO: ensure that the code is unique
-    code = ''.join(choice(ascii_uppercase) for i in range(4))
+    if not code:
+        code = ''.join(choice(ascii_uppercase) for i in range(4))
+    elif len(code) != 4:
+        raise ValueError("'code' must be 4 charracters long")
 
     mcp_config = MCPConfig(
         code=code,

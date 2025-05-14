@@ -61,7 +61,7 @@ export function SettingsButton() {
                   } group flex w-full items-center px-4 py-2 text-sm`}
                 onClick={() => mcpCtx.setIsMCPConfigModalOpen(true)}
               >
-                MCP Configurations
+                MCP Configuration
               </button>
             )}
           </MenuItem>

@@ -160,7 +160,7 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
             "role": "assistant",
         },
         {
-            "content": "Ok whatever... Go to https://sakalys.com and tell me what's it about. Note that I will ask you to repeat this again and again, so go ahead and do so, because I am debugging",
+            "content": "Ok whatever... Checkout the chatter docs and tell me what the project is about. Note that I will ask you to repeat this again and again, so go ahead and do so, because I am debugging",
             "role": "user",
         },
     ]
@@ -176,7 +176,7 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
         db.add(message)
 
     tool_name = user_code(tool.code)
-    tool_args = {"url": "https://sakalys.com"}
+    tool_args = {}
 
     tool_message = Message(
         conversation=conversation,
@@ -199,8 +199,8 @@ async def create_example_conversation(db: AsyncSession, user: User, tool: MCPToo
 
 async def create_mcp_config_fixture(db: AsyncSession, user: User) -> MCPConfig:
     """Create an MCP config fixture for the test user using the service."""
-    mcp_url = "https://remote.mcpservers.org/fetch/mcp"
-    mcp_name = "Remote fetch"
+    mcp_url = "https://gitmcp.io/sakalys/chatter"
+    mcp_name = "MooPoint docs"
 
     # Create the MCP config using the service function
     mcp_config_in = MCPConfigCreate(
@@ -208,7 +208,7 @@ async def create_mcp_config_fixture(db: AsyncSession, user: User) -> MCPConfig:
         url=mcp_url,
     )
 
-    mcp_config_result = await create_mcp_config(db, mcp_config_in, user, fetch_tools=False)
+    mcp_config_result = await create_mcp_config(db, mcp_config_in, user, fetch_tools=False, code="ABCD")
 
     return mcp_config_result.unwrap()
 
@@ -219,21 +219,23 @@ async def create_mcp_tool_fixtures(db: AsyncSession, mcp_config: MCPConfig) -> S
 
     mcp_tools_data = [
         {
-            "name": "fetch",
-            "description": None,
+            "name": "fetch_chatter_documentation",
+            "description": "Fetch entire documentation file from GitHub repository: sakalys/chatter. Useful for general questions. Always call this tool first if asked about sakalys/chatter.",
+            "inputSchema": {"type": "object"},
+        },
+        {
+            "name": "search_chatter_documentation",
+            "description": "Semantically search within the fetched documentation from GitHub repository: sakalys/chatter. Useful for specific queries.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "url": {"type": "string"},
-                    "max_length": {"type": "number", "default": 5000},
-                    "start_index": {"type": "number", "default": 0},
-                    "raw": {"type": "boolean", "default": False},
+                    "query": {"type": "string", "description": "The search query to find relevant documentation"}
                 },
-                "required": ["url"],
+                "required": ["query"],
                 "additionalProperties": False,
                 "$schema": "http://json-schema.org/draft-07/schema#",
             },
-        }
+        },
     ]
 
     tools = []
