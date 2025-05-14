@@ -325,10 +325,10 @@ async def generate_chat_response(
             tools: list[MCPToolShape] = get_preconfigured_tools(preconfigured_config)
             all_mcp_tools.extend(
                 map(
-                    lambda tool: MCPToolShape(
-                        name=preconfigured_code(preconfigured_config.code + "__" + tool.name),
-                        description=tool.description,
-                        inputSchema=tool.inputSchema,
+                    lambda shape: MCPToolShape(
+                        name=preconfigured_code(shape.name),
+                        description=shape.description,
+                        inputSchema=shape.inputSchema,
                     ),
                     tools,
                 )
@@ -531,15 +531,15 @@ async def handle_chat_request(
 
                 if is_preconfigured_call_code(call_code):
                     configs: list[PreconfiguredMCPConfig] = await user.awaitable_attrs.preconfigured_mcp_configs
-                    [config_code, tool_name] = remove_call_code_suffix(call_code).split("__")
+                    [config_code, tool_name, *_] = remove_call_code_suffix(call_code).split("__")
 
                     for config in configs:
                         if config.code != config_code:
                             continue
 
-                        tools: list[MCPToolShape] = get_preconfigured_tools(config)
+                        tools: list[MCPToolShape] = get_preconfigured_tools(config, should_prefix=True)
                         for tool in tools:
-                            if tool.name == tool_name:
+                            if tool.name == config.code + "__" + tool_name:
                                 mcp_tool = tool
                                 break
                         if mcp_tool:
@@ -578,13 +578,13 @@ async def handle_chat_request(
                 }
 
             # Generate and set conversation title after the first response
-            if is_new_conversation and content:
+            if is_new_conversation and (content or len(tool_calls) > 0):
                 generated_title = await generate_and_set_conversation_title(
                     db=db,
                     user=user,
                     conversation=conversation,
                     user_message=user_message,
-                    assistant_message=content,
+                    assistant_message=content or json.dumps({"tool_call": tool_calls[0]}),
                     api_key=decrypted_key,
                     provider=api_key.provider,
                     model=model,
