@@ -78,7 +78,7 @@ export function ChatMessage({ role, content, model, toolCall, onDecision, disabl
                     <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${isUser ? 'bg-blue-100 text-blue-600' : isToolCall ? 'bg-yellow-200 text-yellow-800' : 'bg-purple-100 text-purple-600'}`}>
                         {avatar}
                     </div>
-                    <div className="ml-3 flex-1">
+                    <div className="ml-3 flex-1 min-w-0">
                         <div className="flex items-center">
                             <p className={`text-sm font-medium ${isUser ? 'text-gray-900' : isToolCall ? 'text-yellow-800' : 'text-gray-900'}`}>
                                 {senderName}
@@ -145,7 +145,7 @@ export function IncomingMessage({ incomingMessage, model }: { incomingMessage: s
                 .75 0 01-.75.75H6.75a.75.75 0 01-.75-.75V6.75z" clipRule="evenodd" />
                         </svg>
                     </div>
-                    <div className="ml-3 flex-1">
+                    <div className="ml-3 flex-1 min-w-0">
                         <div className="flex items-center">
                             <p className="text-sm font-medium text-gray-900">{model.id || 'Assistant'}</p>
                         </div>
@@ -180,7 +180,7 @@ export function OutgoingMessage({ content }: {
                             <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
                         </svg>
                     </div>
-                    <div className="ml-3 flex-1">
+                    <div className="ml-3 flex-1 min-w-0">
                         <div className="flex items-center">
                             <p className="text-sm font-medium text-gray-900">You</p>
                         </div>

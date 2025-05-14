@@ -313,7 +313,7 @@ export function ChatInterface() {
                 </div>
             )}
 
-            <div className="flex flex-col flex-1 h-full"> {/* Main chat content container */}
+            <div className="flex flex-col flex-1 h-full min-w-0">
                 {showNoModelsOverlay && (
                     <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
                         <div className="text-center p-4">
