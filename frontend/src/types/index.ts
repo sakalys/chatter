@@ -38,9 +38,10 @@ export interface ApiKey {
 }
 
 export interface McpConfig {
-    id: string;
-    name: string;
-    url: string;
+    id: string
+    name: string
+    code: string
+    url: string
 }
 
 export interface PreconfiguredMcpTool {

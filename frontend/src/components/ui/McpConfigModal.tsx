@@ -192,7 +192,10 @@ export function McpConfigModal() {
                                 <div className="flex justify-between items-center mb-2">
                                     <div className="min-w-0 mr-2">
                                         <div className="font-medium text-gray-900 overflow-hidden text-ellipsis whitespace-nowrap">{config.name || 'Unnamed Configuration'}</div>
-                                        <div className="text-sm text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{config.url || 'No URL'}</div>
+                                        <div className="text-xs font-light text-zinc-500">
+                                            Code: <code className="inline-block px-0.5 rounded border border-teal-200 bg-teal-100 text-teal-600" title="A unique code assigned by us for this server">{config.code}</code>
+                                        </div>
+                                        <div className="text-xs font-light text-zinc-500 overflow-hidden text-ellipsis whitespace-nowrap">URL: {config.url || 'No URL'}</div>
                                     </div>
                                     <button
                                         type="button"
@@ -205,7 +208,6 @@ export function McpConfigModal() {
 
                                 {/* Display tools for this config */}
                                 <ConfigToolsDisplay configId={config.id} />
-
                             </div>
                         ))}
 

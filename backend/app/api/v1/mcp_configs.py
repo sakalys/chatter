@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from result import is_err
 
 from app.core.dependencies import DB, get_current_user
+from app.models.mcp_tool import MCPToolShape
 from app.models.user import User
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigResponse, MCPConfigUpdate
 from app.schemas.mcp_tool import McpTool
@@ -21,7 +22,7 @@ from app.services.preconfigured_mcp_config import (
     create_preconfigured_config,
     get_preconfigured_config_by_code_and_user_id,
     get_preconfigured_configs_by_user,
-    update_tools,
+    get_preconfigured_tools,
 )
 
 router = APIRouter()
@@ -43,15 +44,11 @@ async def read_available_mcp_tools(
     return tools
 
 
-class PreconfiguredMCPTool(BaseModel):
-    name: str
-    description: str | None = None
-
 
 class PreconfiguredMCPConfig(BaseModel):
     code: str
     enabled: bool
-    tools: list[PreconfiguredMCPTool] = []
+    tools: list[MCPToolShape]
 
 
 @router.get("/preconfigured", response_model=list[PreconfiguredMCPConfig])
@@ -63,17 +60,24 @@ async def read_preconfigured_configs(
     Get all available MCP tools from configured MCP servers for the current user,
     optionally filtered by MCP configuration ID.
     """
-    tools = await get_preconfigured_configs_by_user(
+    configs = await get_preconfigured_configs_by_user(
         db,
         current_user,
     )
-    return tools
+
+    response_data = []
+    for config in configs:
+        item = config.__dict__.copy()
+        item["tools"] = get_preconfigured_tools(config, should_prefix=False)
+        response_data.append(item)
+
+    return response_data
 
 
 class TogglePreconfiguredMCPConfigResponse(BaseModel):
     id: UUID
     enabled: bool
-    tools: list[PreconfiguredMCPTool]
+    tools: list[MCPToolShape]
 
 
 class PreconfiguredToggle(BaseModel):
@@ -106,13 +110,13 @@ async def toggle_preconfigured(
 
     config.enabled = toggle_data.enabled
 
-    if toggle_data.enabled:
-        await update_tools(db, config)
-
     await db.commit()
     await db.refresh(config)
 
-    return config
+    item = config.__dict__.copy()
+    item["tools"] = get_preconfigured_tools(config, should_prefix=False)
+
+    return item
 
 
 @router.get("", response_model=list[MCPConfigResponse])

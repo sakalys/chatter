@@ -24,7 +24,6 @@ from app.models import (
     MCPToolShape,
     MCPToolUse,
     PreconfiguredMCPConfig,
-    PreconfiguredMCPTool,
     ToolUseState,
     User,
 )
@@ -41,8 +40,8 @@ from app.services.preconfigured_mcp_config import (
     create_preconfigured_config,
     get_preconfigured_config_by_code_and_user_id,
     get_preconfigured_configs_by_user,
+    get_preconfigured_tools,
     get_preconfigured_url,
-    update_tools,
 )
 
 logger = logging.getLogger(__name__)
@@ -323,7 +322,7 @@ async def generate_chat_response(
             if not preconfigured_config.enabled:
                 continue
 
-            tools: list[PreconfiguredMCPTool] = await preconfigured_config.awaitable_attrs.tools
+            tools: list[MCPToolShape] = get_preconfigured_tools(preconfigured_config)
             all_mcp_tools.extend(
                 map(
                     lambda tool: MCPToolShape(
@@ -538,14 +537,10 @@ async def handle_chat_request(
                         if config.code != config_code:
                             continue
 
-                        tools: list[PreconfiguredMCPTool] = await config.awaitable_attrs.tools
+                        tools: list[MCPToolShape] = get_preconfigured_tools(config)
                         for tool in tools:
                             if tool.name == tool_name:
-                                mcp_tool = MCPToolShape(
-                                    name=tool.name,
-                                    description=tool.description,
-                                    inputSchema=tool.inputSchema,
-                                )
+                                mcp_tool = tool
                                 break
                         if mcp_tool:
                             break

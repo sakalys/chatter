@@ -28,3 +28,4 @@ class MCPConfigResponse(MCPConfigBase):
 
     id: UUID
     user_id: UUID
+    code: str
