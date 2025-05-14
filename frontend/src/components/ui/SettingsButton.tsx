@@ -41,7 +41,7 @@ export function SettingsButton() {
           </svg>
         </MenuButton>
       </div>
-      <DropdownMenu>
+      <DropdownMenu expandTop>
         <div className="py-1">
           <MenuItem>
             {({ focus }) => (

@@ -11,6 +11,7 @@ import { Modal, ModalBody, ModalBox, ModalFooter } from '../ui/modal';
 import { McpConfigModal } from '../ui/McpConfigModal';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import DropdownMenu from '../ui/DropdownMenu';
+import { SettingsButton } from '../ui/SettingsButton';
 
 const fetchConversations = async (): Promise<Conversation[]> => {
   return apiFetch<Conversation[]>('GET', '/conversations');
@@ -117,20 +118,14 @@ export function MainLayout({ children }: PropsWithChildren) {
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               {!isSidebarCollapsed && <h1 className="text-xl font-bold text-blue-600">Moo Point</h1>}
               <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-1 rounded-md hover:bg-gray-200">
-                {isSidebarCollapsed ? (
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                   </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                  </svg>
-                )}
               </button>
             </div>
             {!isSidebarCollapsed && (
               <>
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-visible p-4">
                   <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Conversations</h2>
                   <div className="space-y-1 mb-6">
                     {newChatState === "creating" && ( // Use context state for creating
@@ -203,8 +198,9 @@ export function MainLayout({ children }: PropsWithChildren) {
                     ))}
                   </div>
                 </div>
-                <div className="p-4 border-t border-gray-200">
-                  <Link to="/" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-center">
+                <div className="p-4 border-t border-gray-200 flex space-x-4">
+                    <SettingsButton/>
+                  <Link to="/" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-center grow">
                     New Chat
                   </Link>
                 </div>
