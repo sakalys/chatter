@@ -100,7 +100,7 @@ def _format_mcp_tools_for_openai(mcp_tools: list[MCPToolShape]) -> list[dict[str
             if k not in ["additionalProperties", "$schema"]
         }
 
-        properties = function_parameters["properties"] or {}
+        properties = function_parameters.get("properties", {})
 
         cleaned_properties = properties.copy()
 
