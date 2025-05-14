@@ -46,6 +46,10 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.black]
+line-length = 80
+
+
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 

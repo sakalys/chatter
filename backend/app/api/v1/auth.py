@@ -78,7 +78,7 @@ async def google_login(
             detail="An error occurred during Google login",
         )
 
-@router.post("/test-login", response_model=Token)
+@router.post("/test-login", response_model=Token, include_in_schema=False)
 async def test_login(
     db: DB,
 ):
