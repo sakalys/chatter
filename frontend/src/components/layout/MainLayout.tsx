@@ -11,6 +11,7 @@ import { GlobalSettingsContext } from '../../context/GlobaSettingsContext';
 import { Modal, ModalBody, ModalBox, ModalFooter } from '../ui/modal';
 import { McpConfigModal } from '../ui/McpConfigModal';
 import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
+import DropdownMenu from '../ui/DropdownMenu';
 
 const fetchConversations = async (): Promise<Conversation[]> => {
   return apiFetch<Conversation[]>('GET', '/conversations');
@@ -94,7 +95,7 @@ export function MainLayout({ children }: PropsWithChildren) {
         isApiKeyModalOpen,
         setIsApiKeyModalOpen: (open) => setIsApiKeyModalOpen(open),
       }}>
-    <div className="flex h-full bg-gray-100">
+        <div className="flex h-full bg-gray-100">
           {/* Sidebar */}
           <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -114,9 +115,8 @@ export function MainLayout({ children }: PropsWithChildren) {
                 {!isLoading && !error && conversations?.map((conversation) => (
                   <div
                     key={conversation.id}
-                    className={`relative flex items-center group ${
-                      location.pathname === `/chat/${conversation.id}` ? 'bg-blue-50 text-blue-600' : ''
-                    }`}
+                    className={`relative flex items-center group ${location.pathname === `/chat/${conversation.id}` ? 'bg-blue-50 text-blue-600' : ''
+                      }`}
                   >
                     {editingConversationId === conversation.id ? (
                       <input
@@ -145,34 +145,30 @@ export function MainLayout({ children }: PropsWithChildren) {
                             <EllipsisVerticalIcon className="h-5 w-5" aria-hidden="true" />
                           </MenuButton>
                         </div>
-                        <MenuItems className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                          <div className="py-1">
-                            <MenuItem>
-                              {({ focus }) => (
-                                <button
-                                  className={`${
-                                    focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                        <DropdownMenu>
+                          <MenuItem>
+                            {({ focus }) => (
+                              <button
+                                className={`${focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
                                   } block w-full text-left px-4 py-2 text-sm`}
-                                  onClick={() => handleRenameClick(conversation)}
-                                >
-                                  Rename
-                                </button>
-                              )}
-                            </MenuItem>
-                            <MenuItem>
-                              {({ focus }) => (
-                                <button
-                                  className={`${
-                                    focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                onClick={() => handleRenameClick(conversation)}
+                              >
+                                Rename
+                              </button>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ focus }) => (
+                              <button
+                                className={`${focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
                                   } block w-full text-left px-4 py-2 text-sm`}
-                                  onClick={() => handleDeleteClick(conversation.id)}
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </MenuItem>
-                          </div>
-                        </MenuItems>
+                                onClick={() => handleDeleteClick(conversation.id)}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </MenuItem>
+                        </DropdownMenu>
                       </Menu>
                     )}
                   </div>
@@ -191,50 +187,50 @@ export function MainLayout({ children }: PropsWithChildren) {
             {children}
           </div>
 
-      <Modal open={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)}>
-        <ModalBox
-            title="API Keys Configuration"
-            width="sm"
-            height="auto">
-            <ModalBody>
-              <ApiKeyManagerModal />
-            </ModalBody>
-            <ModalFooter>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={() => setIsApiKeyModalOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </ModalFooter>
-        </ModalBox>
-      </Modal>
+          <Modal open={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)}>
+            <ModalBox
+              title="API Keys Configuration"
+              width="sm"
+              height="auto">
+              <ModalBody>
+                <ApiKeyManagerModal />
+              </ModalBody>
+              <ModalFooter>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                    onClick={() => setIsApiKeyModalOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </ModalFooter>
+            </ModalBox>
+          </Modal>
 
-      <Modal open={isMCPConfigModalOpen} onClose={() => setIsMCPConfigModalOpen(false)}>
-        <ModalBox
-            title="MCP Configuration"
-            width="md"
-            height="auto">
-            <ModalBody>
-                <McpConfigModal/>
-            </ModalBody>
-            <ModalFooter>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={() => setIsMCPConfigModalOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </ModalFooter>
-        </ModalBox>
-      </Modal>
-    </div>
+          <Modal open={isMCPConfigModalOpen} onClose={() => setIsMCPConfigModalOpen(false)}>
+            <ModalBox
+              title="MCP Configuration"
+              width="md"
+              height="auto">
+              <ModalBody>
+                <McpConfigModal />
+              </ModalBody>
+              <ModalFooter>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                    onClick={() => setIsMCPConfigModalOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </ModalFooter>
+            </ModalBox>
+          </Modal>
+        </div>
       </GlobalSettingsContext.Provider>
     </NewConversationContext.Provider >
   );
