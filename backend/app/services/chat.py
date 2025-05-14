@@ -16,21 +16,19 @@ from sqlalchemy.orm import descriptor_props
 from sqlalchemy.sql.operators import is_precedent
 from sse_starlette.sse import EventSourceResponse
 
-from app.models import preconfigured_mcp_config
-from app.models.api_key import ApiKey
-from app.models.conversation import Conversation
-from app.models.mcp_config import MCPConfig
-from app.models.mcp_tool import MCPTool, MCPToolShape
-from app.models.mcp_tool_use import MCPToolUse, ToolUseState
-from app.models.message import Message
-from app.models.preconfigured_mcp_config import PreconfiguredMCPConfig
-from app.models.preconfigured_mcp_tool import PreconfiguredMCPTool
-from app.models.user import User  # Import User model
-from app.schemas.conversation import (
-    ConversationCreate,
-    ConversationUpdate,
-    MessageResponse,
+from app.models import (
+    ApiKey,
+    Conversation,
+    MCPConfig,
+    MCPTool,
+    MCPToolShape,
+    MCPToolUse,
+    PreconfiguredMCPConfig,
+    PreconfiguredMCPTool,
+    ToolUseState,
+    User,
 )
+from app.schemas.conversation import ConversationCreate, ConversationUpdate, MessageResponse
 from app.schemas.message import MessageCreate, ToolUseCreate
 from app.services.api_key import decrypt_api_key
 from app.services.conversation import (
@@ -48,6 +46,26 @@ from app.services.preconfigured_mcp_config import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def user_code(code: str) -> str:
+    return code + "_u"
+
+
+def preconfigured_code(code: str) -> str:
+    return code + "_p"
+
+
+def is_user_call_code(name: str) -> bool:
+    return name.endswith("_u")
+
+
+def is_preconfigured_call_code(name: str) -> bool:
+    return name.endswith("_p")
+
+
+def remove_call_code_suffix(name: str) -> str:
+    return name[0:-2]
 
 
 class StreamEvent:
@@ -95,9 +113,7 @@ def _format_mcp_tools_for_openai(mcp_tools: list[MCPToolShape]) -> list[dict[str
     tools = []
     for tool in mcp_tools:
         function_parameters = {
-            k: v
-            for k, v in tool.inputSchema.items()
-            if k not in ["additionalProperties", "$schema"]
+            k: v for k, v in tool.inputSchema.items() if k not in ["additionalProperties", "$schema"]
         }
 
         properties = function_parameters.get("properties", {})
@@ -110,10 +126,7 @@ def _format_mcp_tools_for_openai(mcp_tools: list[MCPToolShape]) -> list[dict[str
 
                 # see https://spec.openapis.org/oas/v3.0.3#schema
                 # see https://github.com/lastmile-ai/mcp-agent/issues/93
-                if (
-                    property_schema.get("type") == "string"
-                    and property_schema.get("format") == "uri"
-                ):
+                if property_schema.get("type") == "string" and property_schema.get("format") == "uri":
                     del cleaned_property_schema["format"]
 
             cleaned_properties[property_name] = cleaned_property_schema
@@ -166,13 +179,9 @@ async def _generate_litellm_response(
             if msg["role"] == "user":
                 formatted_messages.append({"role": "user", "content": msg["content"]})
             elif msg["role"] == "assistant":
-                formatted_messages.append(
-                    {"role": "assistant", "content": msg["content"]}
-                )
+                formatted_messages.append({"role": "assistant", "content": msg["content"]})
             elif msg["role"] == "system":
-                formatted_messages.append(
-                    {"role": "user", "content": f"System: {msg['content']}"}
-                )
+                formatted_messages.append({"role": "user", "content": f"System: {msg['content']}"})
             elif msg["role"] == "function_call":
                 formatted_messages.append(
                     {
@@ -206,9 +215,7 @@ async def _generate_litellm_response(
             "api_key": api_key,
         }
 
-        if (
-            len(tools) > 0
-        ):  # required for deepseek to not provide the tools array, even if empty
+        if len(tools) > 0:  # required for deepseek to not provide the tools array, even if empty
             args["tools"] = tools
             args["parallel_tool_calls"] = False
 
@@ -236,9 +243,7 @@ async def _generate_litellm_response(
                             name=unfinished_call["name"],
                             arguments=json.loads(unfinished_call["arguments"]),
                         )
-                        yield StreamEvent(
-                            "function_call", json.dumps(call.model_dump())
-                        )
+                        yield StreamEvent("function_call", json.dumps(call.model_dump()))
 
                     unfinished_call = {
                         "name": "",
@@ -249,9 +254,7 @@ async def _generate_litellm_response(
 
                 if function_call is not None:
                     if unfinished_call is None:
-                        raise ValueError(
-                            "Previous buffered call must be set before accessing function_call"
-                        )
+                        raise ValueError("Previous buffered call must be set before accessing function_call")
 
                     if function_call.name:
                         unfinished_call["name"] = function_call.name
@@ -306,30 +309,25 @@ async def generate_chat_response(
             all_mcp_tools.extend(
                 map(
                     lambda tool: MCPToolShape(
-                        name="user__" + str(config.id) + "__" + tool.name,
-                        description=tool.description
-                        or "Gets content from an internet address",
+                        name=user_code(tool.code),
+                        description=tool.description,
                         inputSchema=tool.inputSchema,
                     ),
                     user_tools,
                 )
             )
 
-        configs: list[PreconfiguredMCPConfig] = (
-            await user.awaitable_attrs.preconfigured_mcp_configs
-        )
+        configs: list[PreconfiguredMCPConfig] = await user.awaitable_attrs.preconfigured_mcp_configs
 
-        for preconfigured in configs:
-            if not preconfigured.enabled:
+        for preconfigured_config in configs:
+            if not preconfigured_config.enabled:
                 continue
 
-            tools: list[PreconfiguredMCPTool] = (
-                await preconfigured.awaitable_attrs.tools
-            )
+            tools: list[PreconfiguredMCPTool] = await preconfigured_config.awaitable_attrs.tools
             all_mcp_tools.extend(
                 map(
                     lambda tool: MCPToolShape(
-                        name="preconfigured__" + preconfigured.code + "__" + tool.name,
+                        name=preconfigured_code(preconfigured_config.code + "__" + tool.name),
                         description=tool.description,
                         inputSchema=tool.inputSchema,
                     ),
@@ -372,9 +370,7 @@ async def handle_chat_request(
         Returns:
             Response from the LLM provider or SSE response, including the conversation ID
     """
-    logger.debug(
-        f"Handling chat request for user: {user.id}, conversation: {conversation_id}"
-    )
+    logger.debug(f"Handling chat request for user: {user.id}, conversation: {conversation_id}")
 
     is_new_conversation = conversation_id is None
 
@@ -387,14 +383,10 @@ async def handle_chat_request(
         logger.debug(f"Created new conversation with ID: {conversation_id}")
     else:
         # Get conversation to ensure it exists and belongs to the user
-        conversation = await get_conversation_by_id_and_user_id(
-            db, conversation_id, user.id
-        )
+        conversation = await get_conversation_by_id_and_user_id(db, conversation_id, user.id)
         if not conversation:
             logger.error(f"Conversation not found for ID: {conversation_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
     created_user_message_id: str | None = None
 
@@ -415,20 +407,14 @@ async def handle_chat_request(
 
     # Get all messages in the conversation
     messages = await get_messages_by_conversation(db, conversation.id)
-    logger.debug(
-        f"Retrieved {len(messages)} messages for conversation: {conversation.id}"
-    )
+    logger.debug(f"Retrieved {len(messages)} messages for conversation: {conversation.id}")
 
     # Format messages for the provider
     formatted_messages = []
     for msg in messages:
         formatted_messages.append({"role": msg.role, "content": msg.content})
 
-    if (
-        tool_decision is not None
-        and len(messages)
-        and messages[-1].role == "function_call"
-    ):
+    if tool_decision is not None and len(messages) and messages[-1].role == "function_call":
         logger.debug("Handling tool decision")
 
         tool_use = messages[-1].mcp_tool_use
@@ -472,9 +458,7 @@ async def handle_chat_request(
             # If it's a new conversation, send an initial event with the conversation ID
 
             if is_new_conversation:
-                logger.debug(
-                    f"Sending initial conversation_id event: {conversation.id}"
-                )
+                logger.debug(f"Sending initial conversation_id event: {conversation.id}")
                 yield {"event": "conversation_created", "data": str(conversation.id)}
 
             tool_calls = []
@@ -515,9 +499,9 @@ async def handle_chat_request(
 
                 yield {
                     "event": "message_done",
-                    "data": MessageResponse.model_validate(
-                        created, from_attributes=True
-                    ).model_dump_json(by_alias=True),
+                    "data": MessageResponse.model_validate(created, from_attributes=True).model_dump_json(
+                        by_alias=True
+                    ),
                 }
 
             for tool_call in tool_calls:
@@ -526,43 +510,35 @@ async def handle_chat_request(
                 # and the tool must belong to the mcp config
                 mcp_tool: MCPToolShape | MCPTool | None = None
 
-                call_name: str = tool_call["name"]
+                call_code: str = tool_call["name"]
 
-                if call_name.startswith("user__"):
-                    user_configs: list[MCPConfig] = (
-                        await user.awaitable_attrs.mcp_configs
-                    )
-                    check_name = call_name.removeprefix("user__")
-                    [id, tool_name] = check_name.split("__")
+                # TODO: optimize
+                if is_user_call_code(call_code):
+                    user_configs: list[MCPConfig] = await user.awaitable_attrs.mcp_configs
+                    tool_code = remove_call_code_suffix(call_code)
 
                     for config in user_configs:
-                        if str(config.id) != id:
-                            continue
+                        # if str(config.id) != id:
+                        #     continue
 
                         user_tools: list[MCPTool] = await config.awaitable_attrs.tools
                         for tool in user_tools:
-                            if tool.name == tool_name:
+                            if tool.code == tool_code:
                                 mcp_tool = tool
 
                                 break
                         if mcp_tool:
                             break
 
-                if call_name.startswith("preconfigured__"):
-                    configs: list[PreconfiguredMCPConfig] = (
-                        await user.awaitable_attrs.preconfigured_mcp_configs
-                    )
-                    [code, tool_name] = call_name.removeprefix("preconfigured__").split(
-                        "__"
-                    )
+                if is_preconfigured_call_code(call_code):
+                    configs: list[PreconfiguredMCPConfig] = await user.awaitable_attrs.preconfigured_mcp_configs
+                    [config_code, tool_name] = remove_call_code_suffix(call_code).split("__")
 
                     for config in configs:
-                        if config.code != code:
+                        if config.code != config_code:
                             continue
 
-                        tools: list[PreconfiguredMCPTool] = (
-                            await config.awaitable_attrs.tools
-                        )
+                        tools: list[PreconfiguredMCPTool] = await config.awaitable_attrs.tools
                         for tool in tools:
                             if tool.name == tool_name:
                                 mcp_tool = MCPToolShape(
@@ -601,9 +577,9 @@ async def handle_chat_request(
 
                 yield {
                     "event": "function_call",
-                    "data": MessageResponse.model_validate(
-                        message, from_attributes=True
-                    ).model_dump_json(by_alias=True),
+                    "data": MessageResponse.model_validate(message, from_attributes=True).model_dump_json(
+                        by_alias=True
+                    ),
                 }
 
             # Generate and set conversation title after the first response
@@ -619,9 +595,7 @@ async def handle_chat_request(
                     model=model,
                 )
                 if generated_title:
-                    logger.debug(
-                        f"Sending conversation_title_updated event: {generated_title}"
-                    )
+                    logger.debug(f"Sending conversation_title_updated event: {generated_title}")
                     yield {
                         "event": "conversation_title_updated",
                         "data": generated_title,
@@ -648,7 +622,8 @@ async def handle_tool_call(
     api_key: ApiKey,
     conversation: Conversation,
 ) -> str:
-    is_preconfigured = tool_use.name.startswith("preconfigured__")
+    is_preconfigured = is_preconfigured_call_code(tool_use.name)
+    config_part = remove_call_code_suffix(tool_use.name)
 
     if not is_preconfigured:
         mcp_tool: MCPTool | None = await tool_use.awaitable_attrs.tool
@@ -660,14 +635,11 @@ async def handle_tool_call(
         url = mcp_config.url
         tool_name = mcp_tool.name
     else:
-        config_part = tool_use.name.removeprefix("preconfigured__")
         [code, tool_name] = config_part.split("__")
 
         url = get_preconfigured_url(code)
 
     tool_use.state = ToolUseState.approved if tool_decision else ToolUseState.rejected
-    db.add(tool_use)
-    await db.commit()
 
     # call the tool
     async with streamablehttp_client(url) as (read_stream, write_stream, _):
@@ -681,10 +653,7 @@ async def handle_tool_call(
                 for content_item in result.content:
                     # Explicitly check if the content_item is a text content type
                     # Assuming TextContent is a valid type in the mcp library
-                    if (
-                        isinstance(content_item, TextContent)
-                        and content_item.text is not None
-                    ):
+                    if isinstance(content_item, TextContent) and content_item.text is not None:
                         response_text += content_item.text
                     # You might want to handle other content types here if necessary
                     # elif isinstance(content_item, ImageContent) and content_item.image_url is not None:
@@ -702,6 +671,9 @@ async def handle_tool_call(
                 ),
                 conversation,
             )
+
+            db.add(tool_use)
+            await db.commit()
 
             return response_text
 
@@ -743,9 +715,7 @@ async def generate_and_set_conversation_title(
             await update_conversation(db, conversation, ConversationUpdate(title=title))
 
     except Exception as e:
-        logger.error(
-            f"Error generating or setting conversation title: {e}", exc_info=True
-        )
+        logger.error(f"Error generating or setting conversation title: {e}", exc_info=True)
         # Don't raise an exception here, title generation is not critical
 
     return title

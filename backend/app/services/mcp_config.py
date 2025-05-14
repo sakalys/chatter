@@ -2,6 +2,8 @@ from typing import Literal
 import httpx
 from result import Ok, Err, Result, is_ok, is_err
 from uuid import UUID
+from random import choice
+from string import ascii_uppercase
 
 from app.models.mcp_tool import MCPTool
 from app.models.user import User
@@ -30,7 +32,7 @@ async def get_mcp_configs_by_user(
         List of MCP configuration objects
     """
     result = await db.execute(select(MCPConfig).where(MCPConfig.user_id == user.id))
-    return list(result.scalars().all()) # Cast to list
+    return list(result.scalars().unique().all()) # Cast to list
 
 
 async def get_mcp_config_by_id_and_user_id(
@@ -76,7 +78,12 @@ async def create_mcp_config(
     Returns:
         Created MCP configuration object
     """
+
+    # TODO: ensure that the code is unique
+    code = ''.join(choice(ascii_uppercase) for i in range(4))
+
     mcp_config = MCPConfig(
+        code=code,
         user=user,
         name=mcp_config_in.name,
         url=mcp_config_in.url,
@@ -148,12 +155,16 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Litera
 
                 # Add new tools
                 for tool_data in result.tools:
-                    tool = MCPTool(
-                        mcp_config=mcp_config,
+                    code = tool_data.name + "_" + mcp_config.code
+
+                    tool = create_mcp_tool(
+                        mcp_config,
+                        code=code,
                         name=tool_data.name,
                         description=tool_data.description,
                         inputSchema=tool_data.inputSchema,
                     )
+
                     db.add(tool)
 
                 await db.commit()
@@ -166,8 +177,7 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Litera
 
     return Ok(True)
 
-async def create_mcp_tool(
-    db: AsyncSession,
+def create_mcp_tool(
     mcp_config: MCPConfig,
     name: str,
     description: str | None,
@@ -188,14 +198,11 @@ async def create_mcp_tool(
     """
     tool = MCPTool(
         mcp_config=mcp_config,
+        code=name + "_" + mcp_config.code,
         name=name,
         description=description,
         inputSchema=inputSchema,
     )
-
-    db.add(tool)
-    await db.commit()
-    await db.refresh(tool)
 
     return tool
 
