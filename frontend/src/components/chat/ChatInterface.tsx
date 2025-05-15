@@ -216,7 +216,7 @@ export function ChatInterface() {
                                 setMessages(prev => [...prev, message]);
                                 setIncomingMessage(null);
                             } catch (e) {
-                                console.log({errorParsingContent: eventData})
+                                console.log({errorParsingMesageDone: eventData})
                             }
 
                         } else if (eventType === 'function_call' && typeof eventData === 'string') {

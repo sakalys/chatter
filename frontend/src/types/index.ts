@@ -115,10 +115,17 @@ export const AVAILABLE_MODELS: Model[] = [
         requiresApiKey: true
     },
     {
+        id: 'gpt-4.5-preview',
+        name: 'GPT-4.5 Preview',
+        provider: LLMProvider.OpenAI,
+        description: '',
+        requiresApiKey: true
+    },
+    {
         id: 'gpt-4.1',
         name: 'GPT-4.1',
         provider: LLMProvider.OpenAI,
-        description: 'OpenAI\'s model with advanced capabilities',
+        description: '',
         requiresApiKey: true
     },
     {
