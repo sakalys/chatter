@@ -130,7 +130,7 @@ export function MainLayout({ children }: PropsWithChildren) {
                                     <div className="space-y-1 mb-6">
                                         {newChatState === "creating" && ( // Use context state for creating
                                             <div className="w-full text-left px-3 py-2 rounded-md bg-gray-100 animate-pulse">
-                                                <div className="font-medium truncate text-gray-500">Creating new conversation...</div>
+                                                <div className="font-medium truncate text-gray-500">Creating...</div>
                                             </div>
                                         )}
                                         {isLoading && <div className="text-gray-500">Loading conversations...</div>}

@@ -121,8 +121,7 @@ export const ModalBox = (
     return (
         <div className={"flex-grow sm:rounded-lg max-w-full shadow min-w-0 " + additionalClasses}>
             <div className="relative h-full flex flex-col">
-                {/*Modal header*/}
-                <div className={'flex items-center justify-between p-4 md:p-5 border-b rounded-t space-x-8' + headerClasses}>
+                <div className={'flex items-center justify-between p-4 md:p-5 border-b border-gray-200 rounded-t space-x-8' + headerClasses}>
                     <DialogTitle as="h3" className={'text-xl font-semibold min-w-0 text-gray-900 truncate' + titleClasses}>{title}</DialogTitle>
                     <div className="flex flex-row space-x-8">
                         {addons}

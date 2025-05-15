@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import remarkGfm from 'remark-gfm';
-import { Nl2p } from './ChatInterface';
+import { Nl2br, Nl2p } from './ChatInterface';
 import { MCPToolUse, Model } from '../../types';
 import { ToolCallMessage, ToolCallResponse } from './ToolCallMessage';
 
@@ -69,8 +69,6 @@ export function ChatMessage({ role, content, model, toolCall, onDecision, disabl
         textColor = 'text-yellow-800';
     }
 
-    console.log(role)
-
     return (
         <div className={`py-5 ${bgColor}`}>
             <div className="max-w-4xl mx-auto px-4">
@@ -88,7 +86,7 @@ export function ChatMessage({ role, content, model, toolCall, onDecision, disabl
                             {role === MessageRole.FunctionCallResult ? (
                                 <ToolCallResponse content={content}/>
                             ) : isUser ? (
-                                <Nl2p text={content} />
+                                <Nl2br text={content} />
                             ) : toolCall ? (
                                 <ToolCallMessage toolCall={toolCall} onDecision={onDecision} disabled={disabledToolCall} />
                             ) : (
@@ -186,7 +184,7 @@ export function OutgoingMessage({ content }: {
                         </div>
                         <div className="mt-1 text-sm text-gray-700">
                             <div className="prose prose-sm">
-                                <Nl2p text={content}/>
+                                <Nl2br text={content}/>
                             </div>
                         </div>
                     </div>
