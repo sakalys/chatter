@@ -210,10 +210,14 @@ export function ChatInterface() {
                             // Assuming the data is the text chunk
                             setIncomingMessage({ model: thisModel, message: message });
                         } else if (eventType === 'message_done' && typeof eventData === 'string') {
-                            const message: Message = JSON.parse(eventData);
+                            try {
+                                const message: Message = JSON.parse(eventData);
 
-                            setMessages(prev => [...prev, message]);
-                            setIncomingMessage(null);
+                                setMessages(prev => [...prev, message]);
+                                setIncomingMessage(null);
+                            } catch (e) {
+                                console.log({errorParsingContent: eventData})
+                            }
 
                         } else if (eventType === 'function_call' && typeof eventData === 'string') {
                             const message: Message = JSON.parse(eventData);
