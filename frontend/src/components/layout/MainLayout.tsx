@@ -13,10 +13,6 @@ import { ApiKeyManagerModal } from '../ui/ApiKeyManagerModal';
 import DropdownMenu from '../ui/DropdownMenu';
 import { SettingsButton } from '../ui/SettingsButton';
 
-const fetchConversations = async (): Promise<Conversation[]> => {
-    return apiFetch<Conversation[]>('GET', '/conversations');
-};
-
 export function MainLayout({ children }: PropsWithChildren) {
     const location = useLocation();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -40,7 +36,7 @@ export function MainLayout({ children }: PropsWithChildren) {
     // Fetch conversations using React Query
     const { data: conversations, error, isLoading, refetch } = useQuery<Conversation[], Error>({
         queryKey: ['conversations'],
-        queryFn: () => fetchConversations(),
+        queryFn: () => apiFetch<Conversation[]>('GET', '/conversations'),
         staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
     });
     const [newChatState, setNewChatState] = useState<NewChatState>("no");
@@ -123,9 +119,9 @@ export function MainLayout({ children }: PropsWithChildren) {
                                 </svg>
                             </button>
                         </div>
-                                <div className="flex-1 overflow-y-visible p-4">
-                        {!isSidebarCollapsed && (
-                            <>
+                        <div className="flex-1 overflow-y-scroll p-4">
+                            {!isSidebarCollapsed && (
+                                <>
                                     <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Conversations</h2>
                                     <div className="space-y-1 mb-6">
                                         {newChatState === "creating" && ( // Use context state for creating
@@ -197,17 +193,17 @@ export function MainLayout({ children }: PropsWithChildren) {
                                             </div>
                                         ))}
                                     </div>
-                            </>
-                        )}
-                                </div>
-                                <div className={'border-t border-gray-200 flex justify-around space-x-4 ' + (isSidebarCollapsed ? 'p-2' : 'p-4')}>
-                                    <SettingsButton />
-                                    {!isSidebarCollapsed && (
-                                    <Link to="/" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-center grow">
-                                        New Chat
-                                    </Link>
+                                </>
                             )}
-                                </div>
+                        </div>
+                        <div className={'border-t border-gray-200 flex justify-around space-x-4 ' + (isSidebarCollapsed ? 'p-2' : 'p-4')}>
+                            <SettingsButton />
+                            {!isSidebarCollapsed && (
+                                <Link to="/" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-center grow">
+                                    New Chat
+                                </Link>
+                            )}
+                        </div>
                     </div>
 
                     {/* Main Content */}
