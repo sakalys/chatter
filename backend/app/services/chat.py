@@ -170,7 +170,7 @@ async def _generate_litellm_response(
     formatted_messages.append(
         {
             "role": "system",
-            "content": "Remember... If a question is unrelated to functions provided to you, use your intrinsic knowledge to anwer the question.",
+            "content": "Remember... If a question is unrelated to functions provided to you, use your intrinsic knowledge to anwer the question (you don't have to issue tool use every time).",
         }
     )
     for msg in messages:

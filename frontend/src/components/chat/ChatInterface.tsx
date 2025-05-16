@@ -388,6 +388,7 @@ export function ChatInterface() {
                 <div>
                     <ChatInput
                         reasoning={Boolean(selectedModel.reasoning)}
+                        expensive={Boolean(selectedModel.expensive)}
                         onSendMessage={handleSendMessage}
                         isLoading={isLoading || isLoadingMessages || isLoadingApiKeys}
                         apiKeysLoaded={apiKeys !== undefined && apiKeys.length > 0}

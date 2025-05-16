@@ -32,9 +32,9 @@ export interface Conversation {
 }
 
 export interface ApiKey {
-    id: string; // Add id property
-    provider: string;
-    key: string;
+    id: string // Add id property
+    provider: string
+    key: string
 }
 
 export interface McpConfig {
@@ -63,25 +63,26 @@ export interface McpTool {
 }
 
 export interface Model {
-    id: string;
-    name: string;
+    id: string
+    name: string
     provider: LLMProvider
-    description: string;
-    requiresApiKey: boolean;
+    description: string
+    requiresApiKey: boolean
+    expensive?: boolean
     supportToolCalling?: boolean
     reasoning?: boolean // is a resoning model
 }
 
 export interface ChatCompletionRequest {
-    conversationId?: string; // Optional conversation ID
-    model: string;
-    message: string; // Send single message content
-    apiKey: string;
+    conversationId?: string // Optional conversation ID
+    model: string
+    message: string // Send single message content
+    apiKey: string
 }
 
 export interface ChatCompletionResponse {
-    conversation_id: string;
-    message: Message;
+    conversation_id: string
+    message: Message
 }
 
 export enum LLMProvider {
@@ -119,7 +120,8 @@ export const AVAILABLE_MODELS: Model[] = [
         name: 'GPT-4.5 Preview',
         provider: LLMProvider.OpenAI,
         description: '',
-        requiresApiKey: true
+        requiresApiKey: true,
+        expensive: true,
     },
     {
         id: 'gpt-4.1',
