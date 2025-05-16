@@ -1,6 +1,9 @@
+from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, validator
+
+from app.models.mcp_config import MCPConfigType
 
 
 class MCPConfigBase(BaseModel):
@@ -8,6 +11,12 @@ class MCPConfigBase(BaseModel):
 
     name: str
     url: str
+    # TODO: make without default
+    type: MCPConfigType | None = None
+
+    @field_validator('type')
+    def set_type_default(cls, v):
+        return v or MCPConfigType.StreamableHTTP
 
 
 class MCPConfigCreate(MCPConfigBase):
@@ -21,6 +30,7 @@ class MCPConfigUpdate(BaseModel):
 
     name: str | None = None
     url: str | None = None
+    type: MCPConfigType | None = None
 
 
 class MCPConfigResponse(MCPConfigBase):
