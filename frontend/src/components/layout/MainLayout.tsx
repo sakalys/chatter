@@ -112,7 +112,7 @@ export function MainLayout({ children }: PropsWithChildren) {
                     {/* Sidebar */}
                     <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-16' : 'w-64'}`}>
                         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                            {!isSidebarCollapsed && <h1 className="text-xl font-bold text-blue-600">Moo Point</h1>}
+                            {!isSidebarCollapsed && <h1 className="text-xl font-bold text-blue-600">MooPoint</h1>}
                             <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-1 rounded-md hover:bg-gray-200">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />

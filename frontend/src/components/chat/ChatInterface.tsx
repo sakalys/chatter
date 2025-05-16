@@ -324,7 +324,7 @@ export function ChatInterface() {
                         <div className="text-center p-4">
                             <div className="flex justify-center items-center mb-8">
                                 <div className="text-center text-gray-500">
-                                    <h1 className="text-2xl font-bold mb-4">Welcome to Moo Point!</h1>
+                                    <h1 className="text-2xl font-bold mb-4">Welcome to MooPoint!</h1>
                                     <p className="text-lg"><WelcomeMessage/></p>
                                 </div>
                             </div>

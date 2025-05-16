@@ -98,7 +98,7 @@ const LoginPage = () => {
     <div className='flex flex-col sm:flex-row h-full'>
       <div className="bg-white sm:flex-1 flex items-center justify-center p-6">
         <div className="text-center max-w-md">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">Welcome to Moo Point</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-6">Welcome to MooPoint</h1>
           <p className="text-lg text-gray-700 mb-4"><WelcomeMessage/></p>
         </div>
 
