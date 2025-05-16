@@ -37,11 +37,29 @@ export interface ApiKey {
     key: string
 }
 
+
+export enum MCPConfigType {
+   StreamableHTTP = 'streamable-http',
+   SSE = "sse",
+   DockerRun = "docker-run",
+   Npx = "npx",
+   Uvx = "uvx",
+}
+
+export const mcpConfigTypeOptions: Record<MCPConfigType, Readonly<{name: string}>> = {
+    [MCPConfigType.StreamableHTTP]: {name: "Streamable HTTP"},
+    [MCPConfigType.SSE]: {name: "SSE"},
+    [MCPConfigType.DockerRun]: {name: "docker run"},
+    [MCPConfigType.Npx]: {name: "npx"},
+    [MCPConfigType.Uvx]: {name: "uvx"},
+};
+
 export interface McpConfig {
     id: string
     name: string
     code: string
     url: string
+    type: MCPConfigType // Add type field for the selected option
 }
 
 export interface PreconfiguredMcpTool {
