@@ -1,6 +1,6 @@
 from .api_key import ApiKey
 from .conversation import Conversation
-from .mcp_config import MCPConfig
+from .mcp_config import MCPConfig, MCPConfigType
 from .mcp_tool import MCPTool, MCPToolShape
 from .mcp_tool_use import MCPToolUse, ToolUseState
 from .message import Message
@@ -14,7 +14,9 @@ __all__ = [
     "Conversation",
     "Message",
     "MCPConfig",
+    "MCPConfigType",
     "MCPToolUse",
     "MCPTool",
     "PreconfiguredMCPConfig",
+    "ToolUseState",
 ]

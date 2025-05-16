@@ -1,7 +1,6 @@
-from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, validator
+from pydantic import BaseModel, field_validator
 
 from app.models.mcp_config import MCPConfigType
 
@@ -14,7 +13,7 @@ class MCPConfigBase(BaseModel):
     # TODO: make without default
     type: MCPConfigType | None = None
 
-    @field_validator('type')
+    @field_validator("type")
     def set_type_default(cls, v):
         return v or MCPConfigType.StreamableHTTP
 

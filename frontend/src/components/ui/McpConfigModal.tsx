@@ -3,7 +3,7 @@ import { DefaultError, useMutation, useQuery, useQueryClient } from '@tanstack/r
 import { apiFetch } from '../../util/api';
 import { McpConfig, MCPConfigType, mcpConfigTypeOptions, McpTool, PreconfiguredMcpConfig } from '../../types'; // Import McpConfig and McpTool
 import { FormErrors } from './FormErrors';
-import { Switch, RadioGroup, Radio } from '@headlessui/react';
+import { Switch, RadioGroup, Radio, Label } from '@headlessui/react';
 import LoadingSpinner from './LoadingSpinner';
 
 type EditConfigType = {
@@ -254,6 +254,7 @@ export function McpConfigModal() {
                                         <Radio
                                             key={type}
                                             value={type}
+                                                disabled={type !== MCPConfigType.StreamableHTTP}
                                             className={({ checked }) =>
                                                 `${checked ? 'ring-2 ring-offset-2 ring-blue-500' : ''}
                                                 ${checked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}
@@ -264,7 +265,7 @@ export function McpConfigModal() {
                                                 <div className="flex w-full items-center justify-between">
                                                     <div className="flex items-center">
                                                         <div className="text-sm">
-                                                            <RadioGroup.Label
+                                                            <Label
                                                                 as="p"
                                                                 className={`font-medium ${checked ? 'text-white' : 'text-gray-900'}`}
                                                             >
@@ -272,7 +273,7 @@ export function McpConfigModal() {
                                                                 {type !== MCPConfigType.StreamableHTTP && (
                                                                     <>{' '}<span title="Not yet implemented" className={`ml-2 ${checked ? 'text-white' : 'text-red-700'}`}>(Soon)</span></>
                                                                 )}
-                                                            </RadioGroup.Label>
+                                                            </Label>
                                                         </div>
                                                     </div>
                                                 </div>

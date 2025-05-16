@@ -15,6 +15,7 @@ class ToolUseState(str, enum.Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+    Baba = "nana"
 
 class MCPToolUse(Base):
     """Model for storing instances of MCP tool usage within messages."""
