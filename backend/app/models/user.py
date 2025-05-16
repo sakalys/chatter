@@ -1,3 +1,4 @@
+import datetime
 import uuid
 
 from sqlalchemy.orm import relationship, Mapped, mapped_column
@@ -19,10 +20,11 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(unique=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(nullable=False)
-    full_name: Mapped[str | None] = mapped_column(nullable=True)
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    email: Mapped[str] = mapped_column(unique=True)
+    hashed_password: Mapped[str] = mapped_column()
+    full_name: Mapped[str | None] = mapped_column()
+    is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime.datetime | None] = mapped_column(default=datetime.datetime.now)
 
     # Relationships
     api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user", cascade="all, delete-orphan")
