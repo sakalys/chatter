@@ -119,7 +119,7 @@ export function MainLayout({ children }: PropsWithChildren) {
                                 </svg>
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-scroll p-4">
+                        <div className="flex-1 overflow-y-auto p-4">
                             {!isSidebarCollapsed && (
                                 <>
                                     <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Conversations</h2>

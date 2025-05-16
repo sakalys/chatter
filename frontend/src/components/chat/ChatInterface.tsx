@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch, apiFetchStreaming } from '../../util/api';
 import { useNewConversation } from '../../context/NewConversationContext';
 import { useGlobalSettings } from '../../context/GlobaSettingsContext';
+import { WelcomeMessage } from '../auth/LoginPage';
 
 const fetchMessages = async (conversationId: string | undefined): Promise<Message[]> => {
     if (!conversationId) {
@@ -324,7 +325,7 @@ export function ChatInterface() {
                             <div className="flex justify-center items-center mb-8">
                                 <div className="text-center text-gray-500">
                                     <h1 className="text-2xl font-bold mb-4">Welcome to Moo Point!</h1>
-                                    <p className="text-lg">...a platform for interacting with AI models and MCP tools of your choice.</p>
+                                    <p className="text-lg"><WelcomeMessage/></p>
                                 </div>
                             </div>
                             <p className="text-lg mb-4">Configure your API keys and MCP servers to start chatting</p>

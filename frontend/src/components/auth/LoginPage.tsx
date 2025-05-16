@@ -4,6 +4,10 @@ import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 
+export function WelcomeMessage() {
+    return <>...a platform for interacting with AI models and MCP tools <u>of your choice</u></>
+}
+
 const googleLogin = async (credential: string): Promise<{ access_token: string }> => {
   const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/google-login`, {
     method: 'POST',
@@ -95,7 +99,7 @@ const LoginPage = () => {
       <div className="bg-white sm:flex-1 flex items-center justify-center p-6">
         <div className="text-center max-w-md">
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Welcome to Moo Point</h1>
-          <p className="text-lg text-gray-700 mb-4">...a platform for interacting with AI models and MCP tools <u>of your choice</u></p>
+          <p className="text-lg text-gray-700 mb-4"><WelcomeMessage/></p>
         </div>
 
       </div>

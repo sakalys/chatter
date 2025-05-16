@@ -14,7 +14,7 @@ from app.models.mcp_config import MCPConfig
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
 from app.schemas.mcp_tool import McpTool
 
-from mcp import ClientSession
+from mcp import ClientSession, McpError
 from mcp.client.streamable_http import streamablehttp_client
 
 async def get_mcp_configs_by_user(
@@ -170,7 +170,9 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Litera
 
                 await db.commit()
 
-    except* (httpx.HTTPError):
+    except* httpx.HTTPError:
+        url_error = True
+    except* McpError:
         url_error = True
 
     if url_error:

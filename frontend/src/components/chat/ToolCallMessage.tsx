@@ -52,13 +52,6 @@ interface ToolCallResponseProps {
 }
 
 export function ToolCallResponse({ content }: ToolCallResponseProps) {
-    const breakIndex = content.indexOf('\n');
-
-    const first = breakIndex > -1 ? content.substring(0,  breakIndex) : content;
-    const other = breakIndex > -1 ? content.substring(breakIndex) : '';
-
-    console.log(first, other)
-
     return (
         <div className="w-full max-w-lg rounded-xl bg-black/5">
             <div className="max-h-60 overflow-y-auto p-4">
