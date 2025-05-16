@@ -10,12 +10,7 @@ class MCPConfigBase(BaseModel):
 
     name: str
     url: str
-    # TODO: make without default
-    type: MCPConfigType | None = None
-
-    @field_validator("type")
-    def set_type_default(cls, v):
-        return v or MCPConfigType.StreamableHTTP
+    type: MCPConfigType
 
 
 class MCPConfigCreate(MCPConfigBase):

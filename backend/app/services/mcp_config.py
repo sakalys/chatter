@@ -1,21 +1,21 @@
-from typing import Literal
-import httpx
-from result import Ok, Err, Result, is_ok, is_err
-from uuid import UUID
 from random import choice
 from string import ascii_uppercase
+from typing import Literal
+from uuid import UUID
 
-from app.models.mcp_tool import MCPTool
-from app.models.user import User
-from sqlalchemy import select, delete
+import httpx
+from mcp import ClientSession, McpError
+from mcp.client.streamable_http import streamablehttp_client
+from result import Err, Ok, Result, is_err, is_ok
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.mcp_config import MCPConfig
+from app.models.mcp_tool import MCPTool
+from app.models.user import User
 from app.schemas.mcp_config import MCPConfigCreate, MCPConfigUpdate
 from app.schemas.mcp_tool import McpTool
 
-from mcp import ClientSession, McpError
-from mcp.client.streamable_http import streamablehttp_client
 
 async def get_mcp_configs_by_user(
     db: AsyncSession,
@@ -23,16 +23,16 @@ async def get_mcp_configs_by_user(
 ) -> list[MCPConfig]:
     """
     Get all MCP configurations for a user.
-    
+
     Args:
         db: Database session
         user: User object
-        
+
     Returns:
         List of MCP configuration objects
     """
     result = await db.execute(select(MCPConfig).where(MCPConfig.user_id == user.id))
-    return list(result.scalars().unique().all()) # Cast to list
+    return list(result.scalars().unique().all())  # Cast to list
 
 
 async def get_mcp_config_by_id_and_user_id(
@@ -42,21 +42,16 @@ async def get_mcp_config_by_id_and_user_id(
 ) -> MCPConfig | None:
     """
     Get an MCP configuration by ID for a specific user.
-    
+
     Args:
         db: Database session
         mcp_config_id: MCP configuration ID
         user_id: User ID
-        
+
     Returns:
         MCP configuration object or None if not found
     """
-    result = await db.execute(
-        select(MCPConfig).where(
-            MCPConfig.id == mcp_config_id,
-            MCPConfig.user_id == user_id
-        )
-    )
+    result = await db.execute(select(MCPConfig).where(MCPConfig.id == mcp_config_id, MCPConfig.user_id == user_id))
     return result.scalars().first()
 
 
@@ -82,7 +77,7 @@ async def create_mcp_config(
 
     # TODO: ensure that the code is unique
     if not code:
-        code = ''.join(choice(ascii_uppercase) for i in range(4))
+        code = "".join(choice(ascii_uppercase) for i in range(4))
     elif len(code) != 4:
         raise ValueError("'code' must be 4 charracters long")
 
@@ -90,6 +85,7 @@ async def create_mcp_config(
         code=code,
         user=user,
         name=mcp_config_in.name,
+        type=mcp_config_in.type,
         url=mcp_config_in.url,
     )
 
@@ -111,22 +107,22 @@ async def update_mcp_config(
 ) -> Result[MCPConfig, str]:
     """
     Update an MCP configuration.
-    
+
     Args:
         db: Database session
         mcp_config: MCP configuration object to update
         mcp_config_in: MCP configuration update data
-        
+
     Returns:
         Updated MCP configuration object
     """
     update_data = mcp_config_in.model_dump(exclude_unset=True)
-    
+
     for field, value in update_data.items():
         setattr(mcp_config, field, value)
 
     result = await update_tools(db, mcp_config)
-    
+
     if result.is_err():
         return Err(str(result.err()))
 
@@ -135,13 +131,15 @@ async def update_mcp_config(
 
     return Ok(mcp_config)
 
+
 class UpdateToolsException(Exception):
     pass
+
 
 async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Literal[True], str]:
     """
     Update the tools for an MCP configuration.
-    
+
     Args:
         db: Database session
         mcp_config: MCP configuration object
@@ -180,6 +178,7 @@ async def update_tools(db: AsyncSession, mcp_config: MCPConfig) -> Result[Litera
 
     return Ok(True)
 
+
 def create_mcp_tool(
     mcp_config: MCPConfig,
     name: str,
@@ -210,12 +209,10 @@ def create_mcp_tool(
     return tool
 
 
-async def delete_mcp_config(
-    db: AsyncSession, mcp_config: MCPConfig
-) -> None:
+async def delete_mcp_config(db: AsyncSession, mcp_config: MCPConfig) -> None:
     """
     Delete an MCP configuration.
-    
+
     Args:
         db: Database session
         mcp_config: MCP configuration object to delete
@@ -223,10 +220,11 @@ async def delete_mcp_config(
     await db.delete(mcp_config)
     await db.commit()
 
+
 async def get_available_mcp_tools(
     db: AsyncSession,
     user: User,
-    config_id: UUID | None = None, # Add optional config_id parameter
+    config_id: UUID | None = None,  # Add optional config_id parameter
 ) -> list[McpTool]:
     """
     Get all available MCP tools from configured MCP servers for the current user,
@@ -250,11 +248,10 @@ async def get_available_mcp_tools(
     else:
         mcp_configs = await get_mcp_configs_by_user(db, user)
 
-
     # Fetch all tools associated with the user's configurations from the database
     query = select(MCPTool).join(MCPConfig).where(MCPConfig.user_id == user.id)
     if config_id:
-        query = query.where(MCPTool.mcp_config_id == config_id) # Filter by config_id if provided
+        query = query.where(MCPTool.mcp_config_id == config_id)  # Filter by config_id if provided
 
     result = await db.execute(query)
     tools = result.scalars().all()
@@ -263,8 +260,8 @@ async def get_available_mcp_tools(
     schema_tools = [
         McpTool(
             name=tool.name,
-            description=tool.description or "", # Ensure description is a string
-            server=tool.mcp_config.name # Use the config name as the server identifier
+            description=tool.description or "",  # Ensure description is a string
+            server=tool.mcp_config.name,  # Use the config name as the server identifier
         )
         for tool in tools
     ]

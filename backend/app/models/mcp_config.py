@@ -29,7 +29,7 @@ class MCPConfig(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column()  # User-friendly name for the MCP configuration
     url: Mapped[str] = mapped_column()  # MCP URL
-    type: Mapped[MCPConfigType | None] = mapped_column(types.String(length=16))
+    type: Mapped[MCPConfigType] = mapped_column(types.String(length=16))
     code: Mapped[str] = mapped_column(types.String(4))
 
     # Relationships

@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.models.api_key import ApiKey
 from app.models.conversation import Conversation
-from app.models.mcp_config import MCPConfig
+from app.models.mcp_config import MCPConfig, MCPConfigType
 from app.models.mcp_tool import MCPTool
 from app.models.mcp_tool_use import MCPToolUse, ToolUseState
 from app.models.message import Message
@@ -205,6 +205,7 @@ async def create_mcp_config_fixture(db: AsyncSession, user: User) -> MCPConfig:
     # Create the MCP config using the service function
     mcp_config_in = MCPConfigCreate(
         name=mcp_name,
+        type=MCPConfigType.StreamableHTTP,
         url=mcp_url,
     )
 
