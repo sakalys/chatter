@@ -1,7 +1,6 @@
-import enum
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, UniqueConstraint, types
+from sqlalchemy import ForeignKey, UniqueConstraint, types
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from app.db.base import Base
@@ -10,13 +9,6 @@ import typing
 if typing.TYPE_CHECKING:
     from app.models.user import User
     from app.models.mcp_tool import MCPTool
-
-class MCPConfigType(str, enum.Enum):
-   StreamableHTTP = 'streamable-http'
-   SSE = "sse"
-   DockerRun = "docker-run"
-   Npx = "npx"
-   Uvx = "uvx"
 
 class MCPConfig(Base):
     """Model for storing user MCP configurations."""
@@ -27,9 +19,8 @@ class MCPConfig(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column()  # User-friendly name for the MCP configuration
-    url: Mapped[str] = mapped_column()  # MCP URL
-    type: Mapped[MCPConfigType | None] = mapped_column(Enum(MCPConfigType))
+    name: Mapped[str] = mapped_column(nullable=False)  # User-friendly name for the MCP configuration
+    url: Mapped[str] = mapped_column(nullable=False)  # MCP URL
     code: Mapped[str] = mapped_column(types.String(4))
 
     # Relationships

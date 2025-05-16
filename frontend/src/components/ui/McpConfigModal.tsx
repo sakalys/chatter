@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { DefaultError, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../util/api';
-import { McpConfig, MCPConfigType, mcpConfigTypeOptions, McpTool, PreconfiguredMcpConfig } from '../../types'; // Import McpConfig and McpTool
+import { McpConfig, McpTool, PreconfiguredMcpConfig } from '../../types'; // Import McpConfig and McpTool
 import { FormErrors } from './FormErrors';
-import { Switch, RadioGroup, Radio } from '@headlessui/react';
+import { Switch } from '@headlessui/react';
 import LoadingSpinner from './LoadingSpinner';
 
 type EditConfigType = {
     id: string | null // null means a new config is being created
     name: string
     url: string
-    type: MCPConfigType
 };
 
 interface KnownPreconfigured {
@@ -96,7 +95,6 @@ export function McpConfigModal() {
             id: null,
             name: '',
             url: '',
-            type: MCPConfigType.StreamableHTTP,
         });
     };
 
@@ -248,55 +246,16 @@ export function McpConfigModal() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                                <RadioGroup value={editingConfig.type} onChange={(value) => setEditingConfig({ ...editingConfig, type: value })} className="mb-4 flex space-x-2">
-                                    {Object.entries(mcpConfigTypeOptions).map(([type, option]) => (
-                                        <Radio
-                                            key={type}
-                                            value={type}
-                                            className={({ checked }) =>
-                                                `${checked ? 'ring-2 ring-offset-2 ring-blue-500' : ''}
-                                                ${checked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}
-                                                relative flex cursor-pointer rounded-lg px-3 py-1 shadow-md focus:outline-none`
-                                            }
-                                        >
-                                            {({ checked }) => (
-                                                <div className="flex w-full items-center justify-between">
-                                                    <div className="flex items-center">
-                                                        <div className="text-sm">
-                                                            <RadioGroup.Label
-                                                                as="p"
-                                                                className={`font-medium ${checked ? 'text-white' : 'text-gray-900'}`}
-                                                            >
-                                                                {option.name}
-                                                                {type !== MCPConfigType.StreamableHTTP && (
-                                                                    <>{' '}<span title="Not yet implemented" className={`ml-2 ${checked ? 'text-white' : 'text-red-700'}`}>(Soon)</span></>
-                                                                )}
-                                                            </RadioGroup.Label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </Radio>
-                                    ))}
-                                </RadioGroup>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Streamable HTTP URL</label>
+                                <input
+                                    type="text"
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g., https://example.com/streamable-path"
+                                    value={editingConfig.url}
+                                    required
+                                    onChange={(e) => setEditingConfig({ ...editingConfig, url: e.target.value })}
+                                />
                             </div>
-
-                            {editingConfig.type === MCPConfigType.StreamableHTTP ? (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Streamable HTTP URL</label>
-                                    <input
-                                        type="text"
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., https://example.com/streamable-path"
-                                        value={editingConfig.url}
-                                        required
-                                        onChange={(e) => setEditingConfig({ ...editingConfig, url: e.target.value })}
-                                    />
-                                </div>
-                            ) : (
-                                <div>Addingc servers with <code className="font-mono font-bold border rounded px-1 inline-block text-zinc-700 border-zinc-100 bg-zinc-200">{mcpConfigTypeOptions[editingConfig.type].name}</code> is coming soon!</div>
-                            )}
 
                             {/* Display tools for the config being edited */}
                             {editingConfig.id && <ConfigToolsDisplay configId={editingConfig.id} />}
