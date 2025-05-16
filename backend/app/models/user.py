@@ -24,7 +24,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column()
     full_name: Mapped[str | None] = mapped_column()
     is_active: Mapped[bool] = mapped_column(default=True)
-    created_at: Mapped[datetime.datetime | None] = mapped_column(default=datetime.datetime.now)
+    created_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
 
     # Relationships
     api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user", cascade="all, delete-orphan")
