@@ -11,6 +11,7 @@ docker compose exec db sh -c 'until pg_isready; do sleep 1; done'
 
 # Run migrations
 echo "Running database migrations..."
+cd backend
 uv run alembic upgrade head
 
 # Run fixtures
