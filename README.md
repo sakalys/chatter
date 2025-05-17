@@ -1,4 +1,4 @@
-# Chat Platform
+# MooPoint Chat Platform
 
 A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. Users can select their preferred LLM provider and models and use their own API keys. The platform also supports MCP (Model Context Protocol) calls via user-specified URLs.
 
