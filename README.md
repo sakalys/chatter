@@ -2,6 +2,8 @@
 
 A production-grade, model-agnostic chat platform similar to ChatGPT or Claude. Users can select their preferred LLM provider and models and use their own API keys. The platform also supports MCP (Model Context Protocol) calls via user-specified URLs.
 
+![MooPoint logo](https://raw.githubusercontent.com/sakalys/chatter/refs/heads/main/frontend/public/favicon.png)
+
 ## Features
 
 - **Model Agnostic**: Use any supported LLM provider (OpenAI, Anthropic, etc.)
